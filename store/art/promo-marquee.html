@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Marquee promo tile</title>
+<link rel="stylesheet" href="art.css">
+<script src="art.js"></script>
+<style>
+  .promo { width: 1400px; height: 560px; }
+  .mark { position: absolute; left: 110px; top: 50%; transform: translateY(-50%); }
+  .mark img { display: block; width: 96px; height: 96px; margin-bottom: 30px; border-radius: 12px; box-shadow: 0 16px 40px rgba(36, 16, 120, .45); }
+  .mark b { display: block; color: #fff; font-size: 74px; font-weight: 740; letter-spacing: -.035em; line-height: 1; }
+  .mark span { display: block; margin-top: 16px; color: rgba(255, 255, 255, .82); font-size: 30px; font-weight: 500; letter-spacing: -.01em; }
+  .field { position: absolute; padding: 26px 34px; border: 0; border-radius: 22px; box-shadow: 0 30px 70px rgba(30, 10, 110, .4); }
+  #back { left: 760px; top: 112px; width: 520px; font-size: 34px; opacity: .6; }
+  #front { left: 640px; top: 268px; width: 640px; font-size: 46px; }
+</style>
+</head>
+<body>
+<div class="promo">
+  <div class="mark"><img src="logo.svg" alt=""><b>Smooth Caret</b><span>A caret that glides.</span></div>
+  <div class="field light" id="back"><span data-text>Hello, world</span></div>
+  <div class="field light" id="front"><span data-text>Typing feels smooth</span></div>
+</div>
+<script>
+  glide(document.getElementById('back'), 2, 12, { color: '#6f59f4', width: 3 });
+  glide(document.getElementById('front'), 7, 19, { color: '#6f59f4', width: 4, tail: 220 });
+</script>
+</body>
+</html>

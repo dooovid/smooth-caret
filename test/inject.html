@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- As locked down as a page gets: no inline styles, Trusted Types on, no
+     policies allowed. The pasted-in build has to work here anyway. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; require-trusted-types-for 'script'; trusted-types 'none'">
+<title>Injected menu test</title>
+<link rel="stylesheet" href="inject-page.css">
+<script src="inject-test.js"></script>
+</head>
+<body>
+  <main>
+    <h1>Strict page (inline styles blocked, Trusted Types on)</h1>
+    <p>Stands in for the Claude app. The script below is what you'd paste into DevTools.</p>
+    <div id="composer" contenteditable="true"><p>Rich-text composer, like Claude's message box.</p></div>
+    <textarea id="plain">Plain textarea too.</textarea>
+  </main>
+  <script src="../dist/smooth-caret-inject.js"></script>
+</body>
+</html>

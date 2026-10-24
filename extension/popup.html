@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Smooth Caret</title>
+<link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <!-- ui: everything up to "/ui" is also built into the injected menu by
+       inject/build.mjs, so keep it free of inline scripts and handlers. -->
+  <div class="ui opening" data-tab="motion">
+  <!-- Paint servers shared by every switch. -->
+  <svg class="defs" aria-hidden="true">
+    <defs>
+      <filter id="knob_shadow" x="-50%" y="-50%" width="200%" height="200%" color-interpolation-filters="sRGB">
+        <feDropShadow dx="0" dy="2.93" stdDeviation="1.47" flood-color="#000" flood-opacity=".25"/>
+      </filter>
+      <linearGradient id="knob_fill" x1="0" y1="0" x2="0" y2="1">
+        <stop stop-color="#fff"/>
+        <stop offset="1" stop-color="#C9C9C9"/>
+      </linearGradient>
+      <!-- Track of the Rainbow switch: one hue cycle per switch width. popup.js
+           shifts it with the rainbow's current hue. -->
+      <linearGradient id="rainbow_fill" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="35" y2="0" spreadMethod="repeat">
+        <stop offset="0" stop-color="#ff4d4d"/>
+        <stop offset=".17" stop-color="#ffb84d"/>
+        <stop offset=".33" stop-color="#e8ff4d"/>
+        <stop offset=".5" stop-color="#4dff88"/>
+        <stop offset=".67" stop-color="#4dd2ff"/>
+        <stop offset=".83" stop-color="#a64dff"/>
+        <stop offset="1" stop-color="#ff4d4d"/>
+      </linearGradient>
+    </defs>
+  </svg>
+
+  <header>
+    <img src="icons/128.png" alt="">
+    <h1>Smooth Caret</h1>
+    <label class="switch_container" title="Turn Smooth Caret on or off">
+      <input type="checkbox" id="enabled" aria-label="Enabled">
+      <svg class="switch" width="35" height="19" viewBox="0 0 35 19" aria-hidden="true">
+        <rect class="switch_bg" width="35" height="19" rx="9.5"/>
+        <rect class="switch_knob" x="2" y="2" width="15" height="15" rx="7.5" fill="url(#knob_fill)" filter="url(#knob_shadow)"/>
+      </svg>
+    </label>
+  </header>
+
+  <textarea id="try" rows="2" spellcheck="false" placeholder="Type here to feel it…" autofocus></textarea>
+
+  <div class="tabs" role="tablist">
+    <div class="tab_pill"></div>
+    <button class="tab" role="tab" data-tab="motion" aria-controls="panel_motion">Motion</button>
+    <button class="tab" role="tab" data-tab="color" aria-controls="panel_color">Color</button>
+  </div>
+
+  <div class="panels">
+    <section class="panel" id="panel_motion" role="tabpanel">
+      <div class="slider_block" id="duration">
+        <div class="row">
+          <p class="label">Glide</p>
+          <p class="value" title="Drag sideways to adjust, or click to type"><input type="number" min="0" max="999" aria-label="Glide duration in milliseconds"><span>ms</span></p>
+        </div>
+        <div class="slider_outer">
+          <div class="slider_inner"></div>
+          <input type="range" min="0" max="999" aria-label="Glide duration">
+        </div>
+      </div>
+
+      <div class="row drop_down" id="easing" data-open="false">
+        <p class="label" id="easing_label">Easing</p>
+        <button class="drop_down_main" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="easing_label easing_value">
+          <span class="active_choice" id="easing_value"></span>
+          <svg class="drop_down_chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>
+        </button>
+        <div class="drop_down_menu" role="listbox" aria-labelledby="easing_label">
+          <div role="option" data-option="ease-out">Ease Out</div>
+          <div role="option" data-option="ease-in-out">Ease In &amp; Out</div>
+          <div role="option" data-option="spring">Spring</div>
+          <div role="option" data-option="linear">Linear</div>
+        </div>
+      </div>
+
+      <div class="slider_block" id="width">
+        <div class="row">
+          <p class="label">Width</p>
+          <p class="value" title="Drag sideways to adjust, or click to type"><input type="number" min="1" max="6" aria-label="Caret width in pixels"><span>px</span></p>
+        </div>
+        <div class="slider_outer">
+          <div class="slider_inner"></div>
+          <input type="range" min="1" max="6" aria-label="Caret width">
+        </div>
+      </div>
+
+      <label class="row switch_container">
+        <p class="label">Blink</p>
+        <input type="checkbox" id="blink">
+        <svg class="switch" width="35" height="19" viewBox="0 0 35 19" aria-hidden="true">
+          <rect class="switch_bg" width="35" height="19" rx="9.5"/>
+          <rect class="switch_knob" x="2" y="2" width="15" height="15" rx="7.5" fill="url(#knob_fill)" filter="url(#knob_shadow)"/>
+        </svg>
+      </label>
+    </section>
+
+    <section class="panel" id="panel_color" role="tabpanel">
+      <div class="row">
+        <div class="swatch_hex">
+          <div id="color_picker_bar"></div>
+          <input id="color_input" spellcheck="false" autocomplete="off" aria-label="Hex color">
+          <button class="icon_button" id="eyedropper" title="Pick a color from the screen" aria-label="Pick a color from the screen" hidden>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m2 22 1-1h3l9-9"/><path d="M3 21v-3l9-9"/><path d="m15 6 3.4-3.4a2.1 2.1 0 1 1 3 3L18 9l.4.4a2.1 2.1 0 1 1-3 3l-3.8-3.8a2.1 2.1 0 1 1 3-3l.4.4Z"/></svg>
+          </button>
+        </div>
+        <label class="switch_container small">
+          <p>Match text</p>
+          <input type="checkbox" id="match">
+          <svg class="switch" width="35" height="19" viewBox="0 0 35 19" aria-hidden="true">
+            <rect class="switch_bg" width="35" height="19" rx="9.5"/>
+            <rect class="switch_knob" x="2" y="2" width="15" height="15" rx="7.5" fill="url(#knob_fill)" filter="url(#knob_shadow)"/>
+          </svg>
+        </label>
+      </div>
+
+      <div class="picker">
+        <canvas id="color_field" tabindex="0" aria-label="Saturation and brightness"></canvas>
+        <canvas id="color_slider" tabindex="0" aria-label="Hue"></canvas>
+        <canvas id="opacity_slider" tabindex="0" aria-label="Opacity"></canvas>
+      </div>
+
+      <div class="row rainbow_row">
+        <label class="label rainbow_label" for="rainbow">Rainbow</label>
+        <div class="rainbow_controls">
+          <div class="speed">
+            <span class="speed_label" aria-hidden="true">Speed</span>
+            <div class="slider_block mini" id="rainbow_speed">
+              <div class="slider_outer">
+                <div class="slider_inner"></div>
+                <input type="range" min="1" max="10" step="any" aria-label="Rainbow speed">
+              </div>
+            </div>
+          </div>
+          <label class="switch_container">
+            <input type="checkbox" id="rainbow">
+            <svg class="switch" width="35" height="19" viewBox="0 0 35 19" aria-hidden="true">
+              <rect class="switch_bg" width="35" height="19" rx="9.5"/>
+              <rect class="switch_knob" x="2" y="2" width="15" height="15" rx="7.5" fill="url(#knob_fill)" filter="url(#knob_shadow)"/>
+            </svg>
+          </label>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <footer id="site_row" hidden>
+    <label class="row switch_container">
+      <p class="label">On <span id="site_name"></span></p>
+      <input type="checkbox" id="site">
+      <svg class="switch" width="35" height="19" viewBox="0 0 35 19" aria-hidden="true">
+        <rect class="switch_bg" width="35" height="19" rx="9.5"/>
+        <rect class="switch_knob" x="2" y="2" width="15" height="15" rx="7.5" fill="url(#knob_fill)" filter="url(#knob_shadow)"/>
+      </svg>
+    </label>
+  </footer>
+  </div>
+  <!-- /ui -->
+
+  <script src="ui.js"></script>
+  <script src="popup.js"></script>
+  <script src="content.js"></script>
+</body>
+</html>

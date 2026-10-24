@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Popup</title>
+<script>
+  // The real extension/popup.html with chrome.* stubbed, for the store images.
+  // Settings come from the query string: ?tab=color&s={"colorMode":"custom"}.
+  // ?click=<selector> clicks that control once the popup has opened.
+  // Needs Chrome's --allow-file-access-from-files to read the popup over file://.
+  const q = new URLSearchParams(location.search);
+  addEventListener('load', () => {
+    if (q.get('click')) setTimeout(() => document.querySelector(q.get('click')).click(), 200);
+  });
+  const store = JSON.parse(q.get('s') || '{}');
+  localStorage.setItem('smoothCaret.tab', q.get('tab') || 'motion');
+  window.chrome = {
+    storage: {
+      local: { get: (defaults, cb) => cb({ ...defaults, ...store }), set() {} },
+      onChanged: { addListener() {} },
+    },
+    tabs: { query: (_, cb) => cb([{ url: `https://${q.get('site') || 'github.com'}/` }]) },
+  };
+  const xhr = new XMLHttpRequest();
+  xhr.open('GET', '../../extension/popup.html', false);
+  xhr.send();
+  document.write(xhr.responseText.replace('<head>', '<head><base href="../../extension/">').replace(' autofocus', ''));
+</script>
+</head>
+</html>

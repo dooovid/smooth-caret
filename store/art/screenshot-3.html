@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Screenshot 3</title>
+<link rel="stylesheet" href="art.css">
+<script>
+  window.__SMOOTHCARET_TEST__ = true;
+  window.chrome = { storage: { local: { get: (d, cb) => cb(d), set() {} }, onChanged: { addListener() {} } } };
+</script>
+<script src="../../extension/content.js"></script>
+<script src="art.js"></script>
+<style>
+  .stage { width: 1280px; height: 800px; }
+  .brand { position: absolute; left: 80px; top: 72px; }
+  h1 { position: absolute; left: 80px; top: 168px; }
+  .sub { position: absolute; left: 80px; top: 334px; }
+  .field { position: absolute; left: 80px; width: 600px; font-size: 27px; padding: 14px 22px; }
+  #f1 { top: 452px; }
+  #f2 { top: 552px; }
+  #f3 { top: 652px; }
+  .popup { left: 800px; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="brand"><img src="logo.svg" alt="">Smooth Caret</div>
+  <h1>Any color.<br>Or the site's own.</h1>
+  <p class="sub">Pick one with any opacity, sample one from the screen,<br>or let it cycle through the rainbow.</p>
+
+  <div class="field light" id="f1"><span data-text>Match text keeps each site's caret color</span></div>
+  <div class="field" id="f2"><span data-text>Or pick your own</span></div>
+  <div class="field" id="f3"><span data-text>Or go full rainbow</span></div>
+
+  <div class="popup" id="popup"><iframe src="popup-frame.html?tab=color&s=%7B%22colorMode%22%3A%22custom%22%2C%22color%22%3A%22%23ff6bb5%22%7D"></iframe></div>
+</div>
+<script>
+  glide(document.getElementById('f1'), 6, 40, { color: '#1d2330', width: 2.5 });
+  glide(document.getElementById('f2'), 3, 16, { color: '#ff6bb5' });
+  glide(document.getElementById('f3'), 3, 18, { color: (t) => `hsl(${Math.round(280 * t)} 95% 65%)`, tail: 230, glow: 0.9 });
+  fitPopup(document.getElementById('popup'), 1.3, 800);
+</script>
+</body>
+</html>

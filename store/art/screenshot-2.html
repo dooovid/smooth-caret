@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Screenshot 2</title>
+<link rel="stylesheet" href="art.css">
+<script>
+  window.__SMOOTHCARET_TEST__ = true;
+  window.chrome = { storage: { local: { get: (d, cb) => cb(d), set() {} }, onChanged: { addListener() {} } } };
+</script>
+<script src="../../extension/content.js"></script>
+<script src="art.js"></script>
+<style>
+  .stage { width: 1280px; height: 800px; }
+  .brand { position: absolute; left: 80px; top: 72px; }
+  h1 { position: absolute; left: 80px; top: 168px; }
+  .sub { position: absolute; left: 80px; top: 334px; }
+  .grid { position: absolute; left: 80px; top: 452px; display: grid; grid-template-columns: 300px 300px; gap: 20px; }
+  .card { position: relative; height: 136px; padding: 16px 18px; border: 1px solid #2c2c2c; border-radius: 14px; background: rgba(26, 26, 26, .85); }
+  .card b { display: block; font-size: 17px; font-weight: 650; }
+  .card span { display: block; margin-top: 3px; color: var(--muted); font-size: 14px; }
+  .track { position: absolute; left: 18px; right: 18px; bottom: 16px; height: 34px; }
+  .track::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: #2e2e2e; }
+  .target { position: absolute; top: -4px; bottom: -4px; width: 0; border-left: 1px dashed #5a5a5a; }
+  .popup { left: 800px; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="brand"><img src="logo.svg" alt="">Smooth Caret</div>
+  <h1>Pick how<br>it moves.</h1>
+  <p class="sub">Glide time, easing, width and blink,<br>all live as you type.</p>
+
+  <div class="grid">
+    <div class="card" data-easing="ease-out"><b>Ease Out</b><span>Starts fast, settles gently</span><div class="track"></div></div>
+    <div class="card" data-easing="ease-in-out"><b>Ease In &amp; Out</b><span>Speeds up, then slows down</span><div class="track"></div></div>
+    <div class="card" data-easing="spring"><b>Spring</b><span>Overshoots a little, then settles</span><div class="track"></div></div>
+    <div class="card" data-easing="linear"><b>Linear</b><span>The same speed all the way</span><div class="track"></div></div>
+  </div>
+
+  <div class="popup" id="popup"><iframe src="popup-frame.html?tab=motion&s=%7B%22easing%22%3A%22spring%22%7D&click=%23easing%20.drop_down_main"></iframe></div>
+</div>
+<script>
+  // Each card: the caret's position at every 60fps frame of one jump with that
+  // easing, from the extension's own animation code.
+  for (const card of document.querySelectorAll('.card')) {
+    const track = card.querySelector('.track');
+    const dist = track.clientWidth - 40;
+    const xs = frames(card.dataset.easing, 250, dist, 40);
+    const last = xs.findLastIndex((x) => Math.abs(dist - x) >= 1) + 1;
+    const target = document.createElement('i');
+    target.className = 'target';
+    target.style.left = `${dist + 8}px`;
+    track.append(target);
+    xs.slice(0, last + 1).forEach((x, i, all) => {
+      const t = i / (all.length - 1);
+      bar(track, i === all.length - 1 ? 'caret' : 'ghost', 8 + x - 1.5, 0, 3, 34, '#c695ff', i === all.length - 1 ? 1 : 0.12 + 0.5 * t);
+    });
+  }
+  fitPopup(document.getElementById('popup'), 1.3, 800);
+</script>
+</body>
+</html>

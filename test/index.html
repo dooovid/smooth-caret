@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smooth Caret torture test</title>
+<script>
+  // Run content.js as a plain page script: test hooks on, chrome.* stubbed.
+  window.__SMOOTHCARET_TEST__ = true;
+  const closedRoots = new WeakMap();
+  const attach = Element.prototype.attachShadow;
+  Element.prototype.attachShadow = function (init) {
+    const root = attach.call(this, init);
+    closedRoots.set(this, root);
+    return root;
+  };
+  window.chrome = {
+    dom: { openOrClosedShadowRoot: (el) => closedRoots.get(el) || el.shadowRoot },
+    storage: {
+      local: { get: (defaults, cb) => cb({ ...defaults }), set() {} },
+      onChanged: { addListener() {} },
+    },
+  };
+</script>
+<script>
+  // Fresh copy every load; the dev server lets the browser cache it.
+  document.write(`<script src="../extension/content.js?${Date.now()}"><\/script>`);
+</script>
+<style>
+  :root { color-scheme: light; }
+  body { margin: 0; padding: 24px; background: #f4f5f7; font: 14px/1.4 system-ui, sans-serif; color: #1d2330; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .bar { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; }
+  .case { background: #fff; border-radius: 10px; padding: 12px; box-shadow: 0 1px 2px #0001; min-width: 0; }
+  .case > b { display: block; font-size: 12px; color: #667; margin-bottom: 8px; font-weight: 600; }
+  input, textarea { box-sizing: border-box; }
+
+  #padded { width: 100%; padding: 14px 40px 6px 22px; font: 20px Georgia, serif; letter-spacing: 1.5px;
+            border: 6px solid #ccd; text-indent: 10px; border-radius: 12px; }
+  .wrap-a { padding: 10px; border: 3px dashed #99a; }
+  .wrap-b { padding: 0 18px; display: flex; }
+  .wrap-b input { flex: 1; border: 0; outline: 0; background: #eef; height: 44px; padding: 0; font-size: 17px; }
+
+  #right { width: 100%; text-align: right; font: 16px monospace; padding: 8px; }
+  #center { width: 100%; text-align: center; font: italic 18px Georgia, serif; padding: 8px; }
+  #pw { width: 100%; padding: 8px; font-size: 16px; }
+  #long { width: 100%; padding: 6px 10px; font-size: 15px; }
+
+  .scaled { transform: scale(1.3) translate(30px, 4px); transform-origin: 0 0; width: 240px; height: 74px; }
+  .scaled input { width: 100%; padding: 6px; font-size: 14px; }
+  .scaled-box { height: 110px; }
+
+  #ta { width: 100%; height: 170px; font: 15px/1.7 Georgia, serif; padding: 12px 16px; letter-spacing: .3px;
+        tab-size: 6; text-indent: 24px; }
+  #ta-scroll { width: 100%; height: 96px; font: 13px/1.3 Menlo, monospace; padding: 4px 8px; }
+  #ta-upper { width: 100%; height: 90px; text-transform: uppercase; word-spacing: 6px; font: 14px system-ui; }
+  .scroller { height: 120px; overflow: auto; border: 1px solid #ccd; padding: 8px; }
+  .scroller textarea { width: 100%; height: 260px; font: 14px/1.5 system-ui; }
+
+  #ce { min-height: 160px; padding: 10px 14px; border: 1px solid #ccd; border-radius: 8px; outline: none; }
+  #ce h2 { margin: 0 0 6px; font-size: 22px; }
+  #ce p { margin: 0 0 6px; }
+  #ce-center { text-align: center; padding: 10px; border: 1px solid #ccd; outline: none; }
+
+  dialog input { width: 280px; padding: 10px; font-size: 16px; }
+  .showing-native input, .showing-native textarea, .showing-native [contenteditable] { caret-color: red; }
+</style>
+</head>
+<body>
+<h1>Smooth Caret torture test</h1>
+<div class="bar">
+  <label><input type="checkbox" id="native"> Show native caret in red (to compare)</label>
+  <button id="open-dialog">Open modal dialog</button>
+  <span id="report"></span>
+</div>
+
+<div class="grid">
+  <div class="case"><b>Plain input</b><input id="plain" style="width:100%" value="Hello world, plain input"></div>
+
+  <div class="case"><b>Weird padding, border, letter-spacing, text-indent</b>
+    <input id="padded" value="Pad me like it's 2009"></div>
+
+  <div class="case"><b>Input nested in padded wrappers, no padding of its own</b>
+    <div class="wrap-a"><div class="wrap-b"><span>🔍&nbsp;</span><input id="nested" value="search with no padding"></div></div></div>
+
+  <div class="case"><b>Right aligned</b><input id="right" value="aligned right"></div>
+  <div class="case"><b>Centered italic</b><input id="center" value="centered text"></div>
+  <div class="case"><b>Password</b><input id="pw" type="password" value="hunter2hunter2"></div>
+
+  <div class="case"><b>Overflowing input (scrolls sideways)</b>
+    <input id="long" value="This input has way more text than fits so it has to scroll horizontally as you move through it, all the way to the end"></div>
+
+  <div class="case scaled-box"><b>Inside transform: scale(1.3)</b>
+    <div class="scaled"><input id="scaled" value="scaled up and translated"></div></div>
+
+  <div class="case"><b>Textarea: wrapping, tabs, emoji, indent, letter-spacing</b>
+<textarea id="ta">Soft wraps happen here because this line is long enough to need at least one wrap in a narrow box.
+	Tabbed line	with	tabs.
+Emoji 🙂👍🏽 and accents: café, naïve, coöperate.
+
+Supercalifragilisticexpialidocious_with_a_very_long_unbroken_word_that_has_to_break
+last line</textarea></div>
+
+  <div class="case"><b>Textarea scrolled (many lines)</b>
+<textarea id="ta-scroll">line 1
+line 2 has more words so it is longer than the others here
+line 3
+line 4
+line 5 is near the bottom
+line 6
+line 7
+line 8
+line 9
+line 10 end</textarea></div>
+
+  <div class="case"><b>text-transform: uppercase, word-spacing</b>
+<textarea id="ta-upper">uppercase transform changes glyph widths so the mirror has to copy it too</textarea></div>
+
+  <div class="case"><b>Textarea inside a scrolling div (clipped)</b>
+    <div class="scroller"><textarea id="ta-clip">Scroll the outer box: the caret has to stay glued to this text and get clipped at the edge of the scroller instead of floating over the page.
+
+More text down here.
+And here.</textarea></div></div>
+
+  <div class="case"><b>contenteditable: headings, inline styles, empty lines, lists</b>
+    <div id="ce" contenteditable="true"><h2>A heading</h2><p>Paragraph with <b>bold</b>, <span style="font-size:26px">big</span> and <i>italic</i> text that wraps onto another line.</p><p><br></p><ul><li>list item one</li><li>two</li></ul></div></div>
+
+  <div class="case"><b>contenteditable, centered, starts empty</b>
+    <div id="ce-center" contenteditable="true"><br></div></div>
+
+  <div class="case"><b>Input inside a closed shadow root</b><x-field id="shadow-host"></x-field></div>
+</div>
+
+<dialog id="dlg"><p>Modal dialog (top layer)</p><input id="dlg-input" value="inside a modal"><p><button id="close-dialog">Close</button></p></dialog>
+
+<script>
+  customElements.define('x-field', class extends HTMLElement {
+    constructor() {
+      super();
+      const root = this.attachShadow({ mode: 'closed' });
+      root.innerHTML = '<style>div{padding:6px;border:2px solid #9ad;border-radius:20px}'
+        + 'input{all:unset;width:100%;font:16px Georgia,serif;caret-color:#c0f}</style>'
+        + '<div><input value="shadow DOM input, closed root"></div>';
+      this.input = root.querySelector('input');
+      this.root = root;
+    }
+  });
+
+  document.getElementById('native').onchange = (e) => {
+    document.body.classList.toggle('showing-native', e.target.checked);
+    __smoothCaretDebug.keepNative(e.target.checked);
+  };
+  document.getElementById('open-dialog').onclick = () => document.getElementById('dlg').showModal();
+  document.getElementById('close-dialog').onclick = () => document.getElementById('dlg').close();
+
+  // Round trip: put the caret at offset k, ask content.js where it is, then ask
+  // Chrome which caret offset lives at that point. They have to agree.
+  function visibleAt(el, x, y) {
+    const r = el.getBoundingClientRect();
+    const inner = { l: r.left + el.clientLeft, t: r.top + el.clientTop };
+    return x >= inner.l && x <= inner.l + el.clientWidth * (r.width / el.offsetWidth)
+      && y >= inner.t && y <= inner.t + el.clientHeight * (r.height / el.offsetHeight)
+      && y >= 0 && y < innerHeight && x >= 0 && x < innerWidth;
+  }
+
+  function checkField(el, root) {
+    const fails = [];
+    let tested = 0;
+    let skipped = 0;
+    let worst = 0;
+    el.focus();
+    // Only offsets a caret can actually sit at: grapheme boundaries, so never
+    // inside an emoji + skin-tone modifier or a surrogate pair.
+    const stops = [0];
+    for (const g of new Intl.Segmenter().segment(el.value)) stops.push(g.index + g.segment.length);
+    for (const k of stops) {
+      el.setSelectionRange(k, k);
+      let p = __smoothCaretDebug.target(el);
+      if (!p) { fails.push({ k, why: 'no target' }); continue; }
+      if (!visibleAt(el, p.x, p.y + p.h / 2)) {
+        // Scroll the field itself so offset k is in view, which also exercises
+        // the scrollLeft/scrollTop math.
+        const r = el.getBoundingClientRect();
+        el.scrollTop += p.y + p.h / 2 - (r.top + r.height / 2);
+        el.scrollLeft += p.x - (r.left + r.width / 2);
+        p = __smoothCaretDebug.target(el);
+      }
+      const probes = [p.y + p.h / 2, p.y + 2, p.y + p.h - 2];
+      // Skip points hidden behind an ancestor scroller; the extension clips
+      // the caret there anyway.
+      const hit = (x, y) => { const h = (root || document).elementFromPoint(x, y); return h === el || h === el.getRootNode().host; };
+      if (!probes.every((y) => visibleAt(el, p.x, y) && hit(p.x, y))) { skipped++; continue; }
+      tested++;
+      for (const y of probes) {
+        const cp = document.caretPositionFromPoint(p.x, y, root ? { shadowRoots: [root] } : undefined);
+        const got = cp && cp.offsetNode === el ? cp.offset : (cp ? cp.offsetNode.nodeName : null);
+        // Chrome's own caret rect at that offset; ours has to sit right on it.
+        const nr = cp && cp.getClientRect && cp.getClientRect();
+        // At a soft wrap Chrome may report either side of the same offset.
+        const off = (c) => Math.max(Math.abs(nr.left - c.x), Math.abs(nr.top - c.y), Math.abs(nr.height - c.h));
+        const err = nr && nr.height ? Math.min(off(p), p.up ? off(p.up) : Infinity) : 0;
+        worst = Math.max(worst, err);
+        if (got !== k || err > 0.5) {
+          fails.push({ k, y: Math.round(y - p.y), got, err: +err.toFixed(2), around: JSON.stringify(el.value.slice(Math.max(0, k - 3), k + 3)) });
+          break;
+        }
+      }
+    }
+    return { id: el.id || 'shadow-input', tested, skipped, worstPx: +worst.toFixed(3), fails: fails.slice(0, 8), failCount: fails.length };
+  }
+
+  function checkEditable(el) {
+    const fails = [];
+    let tested = 0;
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    const sel = getSelection();
+    el.focus();
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      for (let k = 0; k <= n.length; k++) {
+        sel.collapse(n, k);
+        const p = __smoothCaretDebug.target(el);
+        const native = sel.getRangeAt(0).getClientRects()[0];
+        tested++;
+        if (!p || !native || Math.abs(p.x - native.left) > 0.5 || Math.abs(p.y - native.top) > 0.5) {
+          fails.push({ text: n.data.slice(0, 12), k, p, native: native && { x: native.left, y: native.top } });
+        }
+      }
+    }
+    return { id: el.id, tested, fails: fails.slice(0, 5), failCount: fails.length };
+  }
+
+  window.runChecks = () => {
+    const ids = ['plain', 'padded', 'nested', 'right', 'center', 'pw', 'long', 'scaled', 'ta', 'ta-scroll', 'ta-upper', 'ta-clip'];
+    const out = ids.map((id) => {
+      const el = document.getElementById(id);
+      el.scrollIntoView({ block: 'center' });
+      return checkField(el);
+    });
+    const sh = document.getElementById('shadow-host');
+    sh.scrollIntoView({ block: 'center' });
+    out.push(checkField(sh.input, sh.root));
+    const ce = document.getElementById('ce');
+    ce.scrollIntoView({ block: 'center' });
+    out.push(checkEditable(ce));
+    return out;
+  };
+</script>
+</body>
+</html>

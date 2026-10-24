@@ -1,0 +1,387 @@
+/* Look and components from dooovid/SmoothCursorExtension's popup.
+   Everything hangs off .ui, so the same sheet styles the extension popup and
+   the injected menu's shadow root (inject/menu.js). */
+.ui {
+  interpolate-size: allow-keywords;
+  color-scheme: dark;
+  --bg: #212121;
+  --field: #1a1a1a;
+  --text: #ececec;
+  --muted: #9a9a9a;
+  --line: #303030;
+  --edge: #3d3d3d;
+  --accent: #c695ff;
+  --on: #05df72;
+  --ease: cubic-bezier(.16, 1, .3, 1);
+  --track: linear-gradient(180deg, #737373 0%, #3D3D3D 100%);
+  --metal: linear-gradient(180deg, #FFF 0%, #A8A8A8 87.5%);
+}
+
+* {
+  box-sizing: border-box;
+  font-family: Inter var, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto,
+    Helvetica Neue, Arial, Noto Sans, sans-serif, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Noto Color Emoji;
+}
+
+/* The extension popup's page; Chrome sizes the popup to it. */
+body { width: 300px; margin: 0; background: #212121; }
+
+.ui {
+  width: 300px;
+  padding: 14px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.3;
+  user-select: none;
+}
+
+p, h1 { margin: 0; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.defs { position: absolute; width: 0; height: 0; }
+
+/* Everything except the master switch fades back when it's off. */
+.ui.off .tabs, .ui.off .panels, .ui.off footer { opacity: .35; pointer-events: none; }
+.tabs, .panels, footer { transition: opacity .3s; }
+
+/* No transitions while the saved state is applied on open, except the slider
+   fills, which ease in to their values. */
+.ui.opening *:not(.slider_inner) { transition: none !important; }
+
+/* ---------- header and try-it field ---------- */
+
+header { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; }
+header img { width: 22px; height: 22px; }
+header h1 { flex: 1; font-size: 16px; font-weight: 650; letter-spacing: -.01em; }
+
+#try {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--edge);
+  border-radius: 8px;
+  background: var(--field);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.4;
+  resize: none;
+  outline: none;
+  transition: border-color .25s;
+}
+#try:focus { border-color: var(--accent); }
+#try::placeholder { color: #777; }
+
+/* ---------- tabs ---------- */
+
+/* The bar and pill reuse the slider's track and fill, and the pill glides. */
+.tabs {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  height: 30px;
+  margin: 12px 0 14px;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--track);
+}
+.tab_pill {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 2px;
+  width: calc(50% - 2px);
+  border-radius: 6px;
+  background: var(--metal);
+  box-shadow: 0 4px 4px rgba(0, 0, 0, .25);
+  transition: translate .45s var(--ease);
+}
+.ui[data-tab="color"] .tab_pill { translate: 100% 0; }
+.tab {
+  position: relative;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: #f2f2f2;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color .3s;
+}
+.tab[aria-selected="true"] { color: #1b1b1b; }
+
+/* Both panels share one grid cell, so the area is as tall as the taller one
+   and switching tabs never resizes the popup. The hidden one stays laid out
+   (the color canvases need their size) but invisible.
+   Switching is a hand-off, never an overlap: the old panel slips out fast,
+   then the new one eases in from the side the pill is heading. */
+/* The panel area spans the popup's full 300px and clips sideways, so neither
+   the waiting panel, parked 12px to one side, nor the slide between tabs can
+   push the content wider. Chrome sizes the popup to its content, so any
+   overflow there would change the popup's width per tab. */
+.panels { display: grid; margin: 0 -14px; padding: 0 14px; overflow-x: clip; }
+.panel {
+  grid-area: 1 / 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition:
+    opacity .3s cubic-bezier(.2, .7, .3, 1) .12s,
+    translate .45s var(--ease) .12s,
+    filter .3s ease .12s,
+    visibility 0s .12s;
+}
+.ui[data-tab="motion"] #panel_color, .ui[data-tab="color"] #panel_motion {
+  opacity: 0;
+  visibility: hidden;
+  filter: blur(3px);
+  transition: opacity .14s ease-in, translate .14s ease-in, filter .14s ease-in, visibility 0s .14s;
+}
+.ui[data-tab="motion"] #panel_color { translate: 12px 0; }
+.ui[data-tab="color"] #panel_motion { translate: -12px 0; }
+/* Motion has fewer rows; spread them over the shared height. */
+#panel_motion { justify-content: space-between; }
+
+/* ---------- rows ---------- */
+
+.row { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 24px; }
+.label { font-weight: 500; }
+/* Editable values are soft chips: a faint fill at rest so they read as
+   fields, lit on hover, lavender while scrubbing or typing. */
+.value, #color_input, .icon_button {
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: rgb(255 255 255 / .05);
+  transition: background .2s, border-color .2s, box-shadow .2s;
+}
+.value:hover, #color_input:hover, .icon_button:hover { background: rgb(255 255 255 / .1); border-color: rgb(255 255 255 / .14); }
+.value.scrubbing { background: rgb(198 149 255 / .16); border-color: rgb(198 149 255 / .45); }
+.value:focus-within, #color_input:focus, .icon_button.picking {
+  background: rgb(198 149 255 / .12);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgb(198 149 255 / .15);
+}
+.value {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  padding: 2px 7px 2px 4px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  cursor: ew-resize;
+  user-select: none;
+}
+.value:focus-within { cursor: text; }
+.value input[type="number"] {
+  width: 30px;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  text-align: right;
+  cursor: inherit;
+  appearance: textfield;
+}
+input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { appearance: none; margin: 0; }
+
+footer { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+footer[hidden] { display: none; }
+footer .label { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+#site_name { color: var(--muted); }
+
+/* ---------- switch ---------- */
+
+.switch_container { display: flex; align-items: center; gap: 8px; min-width: 0; cursor: pointer; }
+.switch_container input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.switch_container input:focus-visible + .switch { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 10px; }
+.switch { flex: none; }
+.switch_bg { fill: #C7C7C7; transition: fill .2s; }
+/* The knob stretches while pressed, then springs across. */
+.switch_knob { transition: x .3s var(--ease), width .3s var(--ease); }
+.switch_container:active .switch_knob { width: 19px; }
+.switch_container input:checked + .switch .switch_bg { fill: var(--on); }
+.switch_container input:checked + .switch .switch_knob { x: 18px; }
+.switch_container:active input:checked + .switch .switch_knob { x: 14px; }
+.switch_container.small { gap: 7px; color: var(--muted); font-size: 12px; }
+.switch_container.small .switch { width: 29px; height: 16px; }
+
+/* ---------- slider ---------- */
+
+.slider_block { display: flex; flex-direction: column; gap: 7px; }
+.slider_outer {
+  position: relative;
+  height: 16px;
+  padding: 2px;
+  border-radius: 6px;
+  background: var(--track);
+}
+.slider_outer:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* The fill trails the value on a long ease, the signature "catch up" feel. */
+.slider_inner {
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 1%;
+  height: 12px;
+  border-radius: 4px;
+  background: var(--metal);
+  box-shadow: 0 3px 4px rgba(0, 0, 0, .25);
+  transition: width 1s cubic-bezier(.01, .99, .17, 1);
+  pointer-events: none;
+}
+/* Mid-drag on a continuous slider, script eases the fill instead
+   (Slider.beginDrag in popup.js). */
+.slider_outer.dragging .slider_inner { transition: none; }
+/* The real range input sits invisibly on top, so drag, click and arrow keys
+   all work natively. */
+.slider_outer input[type="range"] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* ---------- dropdown ---------- */
+
+.drop_down { position: relative; z-index: 10; }
+.drop_down_main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  width: 140px;
+  padding: 4px 6px 4px 10px;
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  background: var(--field);
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-radius .3s, border-color .25s;
+}
+.drop_down_main:hover { border-color: #5a5a5a; }
+.active_choice { display: inline-block; }
+.drop_down_chevron { color: var(--muted); transition: rotate .3s; }
+.drop_down[data-open="true"] .drop_down_main { border-radius: 6px 6px 0 0; }
+.drop_down[data-open="true"] .drop_down_chevron { rotate: 90deg; }
+
+.drop_down_menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 140px;
+  height: 0;
+  padding: 0 4px;
+  overflow: hidden;
+  opacity: 0;
+  visibility: hidden;
+  border: 1px solid var(--edge);
+  border-top: 0;
+  border-radius: 0 0 6px 6px;
+  background: var(--field);
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / .4), 0 4px 6px -4px rgb(0 0 0 / .4);
+  transition: height .3s var(--ease), padding .3s var(--ease), opacity .3s, visibility 0s .3s;
+}
+.drop_down[data-open="true"] .drop_down_menu {
+  height: auto;
+  padding: 4px;
+  opacity: 1;
+  visibility: visible;
+  transition: height .3s var(--ease), padding .3s var(--ease), opacity .3s, visibility 0s;
+}
+.drop_down_menu > div {
+  padding: 5px 7px;
+  border-radius: 5px;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: .3s;
+}
+.drop_down_menu > div:hover, .drop_down_menu > div.active { background-color: #333; scale: 1.02; }
+.drop_down_menu > div[aria-selected="true"] { color: var(--accent); }
+
+/* ---------- color ---------- */
+
+.swatch_hex { display: flex; align-items: center; gap: 8px; }
+#color_picker_bar {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border-radius: 6px;
+  background:
+    linear-gradient(var(--color, #000), var(--color, #000)),
+    repeating-conic-gradient(#9e9e9e 0 25%, #c8c8c8 0 50%) 0 0 / 8px 8px;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / .1);
+}
+#color_input {
+  width: 84px;
+  padding: 3px 7px;
+  outline: none;
+  color: var(--text);
+  font: 500 12.5px ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+#color_input.bad { border-color: #ff6b6b; box-shadow: 0 0 0 3px rgb(255 107 107 / .15); }
+
+/* Eyedropper: an icon-only chip that glows while Chrome's picker is open. */
+.icon_button {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  padding: 0;
+  color: var(--muted);
+  cursor: pointer;
+}
+.icon_button[hidden] { display: none; }
+.icon_button:hover { color: var(--text); }
+.icon_button:active { scale: .92; }
+.icon_button.picking { color: var(--accent); }
+
+/* Canvases run 10px past each side so a handle can sit on the edge; the
+   visible field lines up with everything else. */
+.picker { display: grid; gap: 6px; margin: -4px -10px 0; transition: opacity .3s; }
+.picker canvas { display: block; width: 100%; touch-action: none; }
+#color_field { height: 104px; cursor: crosshair; }
+#color_slider, #opacity_slider { height: 18px; cursor: pointer; }
+/* Under Match text, everything that belongs to the custom color steps back
+   together. It all stays usable: touching any of it switches back. */
+.swatch_hex, .rainbow_row { transition: opacity .3s; }
+.ui.match :is(.swatch_hex, .picker, .rainbow_row) { opacity: .4; }
+.ui.match :is(.swatch_hex, .picker, .rainbow_row):hover { opacity: .7; }
+
+/* ---------- rainbow ---------- */
+
+.rainbow_controls { display: flex; align-items: center; gap: 10px; }
+/* The speed control slides out from behind the switch while the rainbow runs. */
+.speed {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 142px;
+  overflow: clip;
+  overflow-clip-margin: 4px;
+  transition: width .45s var(--ease), opacity .3s;
+}
+.ui:not(.rainbow) .speed { width: 0; opacity: 0; pointer-events: none; }
+.speed_label { flex: none; color: var(--muted); font-size: 12px; }
+.slider_block.mini { flex: none; width: 96px; }
+.rainbow_label { cursor: pointer; }
+#rainbow:checked + .switch .switch_bg { fill: url(#rainbow_fill); }
+/* The label's gradient is shifted by the rainbow's current hue (popup.js),
+   so it moves with the caret and never jumps when the speed changes. */
+.ui.rainbow .rainbow_label {
+  background: linear-gradient(90deg, #ff4d4d, #ffb84d, #e8ff4d, #4dff88, #4dd2ff, #a64dff, #ff4d4d)
+    var(--rainbow-shift, 0px) 0 / 120px 100% repeat-x;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}

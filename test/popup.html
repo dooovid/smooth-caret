@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Popup preview</title>
+<script>
+  // Renders ../extension/popup.html outside the extension, with chrome.* stubbed
+  // by an in-memory store that fires onChanged like the real one.
+  const store = {};
+  const listeners = [];
+  window.chrome = {
+    storage: {
+      local: {
+        get: (defaults, cb) => cb({ ...defaults, ...store }),
+        set(patch) {
+          const changes = {};
+          for (const [k, v] of Object.entries(patch)) changes[k] = { oldValue: store[k], newValue: v };
+          Object.assign(store, patch);
+          listeners.forEach((fn) => fn(changes, 'local'));
+        },
+      },
+      onChanged: { addListener: (fn) => listeners.push(fn) },
+    },
+    tabs: { query: (q, cb) => cb([{ url: 'https://mail.example.com/inbox' }]) },
+  };
+  const xhr = new XMLHttpRequest();
+  xhr.open('GET', '../extension/popup.html', false);
+  xhr.send();
+  document.write(xhr.responseText.replace('<head>', '<head><base href="../extension/">'));
+</script>
+</head>
+</html>

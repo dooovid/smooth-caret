@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Screenshot 1</title>
+<link rel="stylesheet" href="art.css">
+<script>
+  window.__SMOOTHCARET_TEST__ = true;
+  window.chrome = { storage: { local: { get: (d, cb) => cb(d), set() {} }, onChanged: { addListener() {} } } };
+</script>
+<script src="../../extension/content.js"></script>
+<script src="art.js"></script>
+<style>
+  .stage { width: 1280px; height: 800px; }
+  .brand { position: absolute; left: 80px; top: 72px; }
+  h1 { position: absolute; left: 80px; top: 168px; }
+  .sub { position: absolute; left: 80px; top: 334px; width: 560px; }
+  #f1 { position: absolute; left: 80px; top: 470px; width: 580px; }
+  #f2 { position: absolute; left: 80px; top: 612px; width: 580px; font-size: 26px; padding: 16px 22px; }
+  .popup { left: 786px; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="brand"><img src="logo.svg" alt="">Smooth Caret</div>
+  <h1>A caret<br>that glides.</h1>
+  <p class="sub">Smooth Caret animates the text caret<br>in every field, on every site.</p>
+
+  <div class="field" id="f1"><span data-text>Typing feels smooth now</span></div>
+  <div class="field light" id="f2"><span data-text>Search, forms, email, chat, docs</span></div>
+
+  <div class="popup" id="popup"><iframe src="popup-frame.html?tab=motion"></iframe></div>
+</div>
+<script>
+  glide(document.getElementById('f1'), 7, 23);
+  glide(document.getElementById('f2'), 14, 32, { color: '#6f59f4', width: 2.5 });
+  fitPopup(document.getElementById('popup'), 1.4, 800);
+</script>
+</body>
+</html>

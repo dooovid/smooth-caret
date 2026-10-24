@@ -1,0 +1,79 @@
+/* Shared by the store image pages. Colors are the popup's (extension/popup.css)
+   plus the logo's violet. */
+:root {
+  --bg: #121212;
+  --field: #1a1a1a;
+  --edge: #3d3d3d;
+  --text: #ececec;
+  --muted: #9a9a9a;
+  --accent: #c695ff;
+  --brand: #6f59f4;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; overflow: hidden; background: transparent; }
+body {
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  color: var(--text);
+}
+
+/* Screenshots: the popup's dark gray with a violet glow. */
+.stage {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(900px 620px at 8% -6%, rgba(111, 89, 244, .30), transparent 62%),
+    radial-gradient(760px 560px at 100% 104%, rgba(198, 149, 255, .16), transparent 62%),
+    var(--bg);
+}
+
+/* Promo tiles: saturated violet, per the store's promo guidelines. */
+.promo {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 140% at 0% 0%, #8b74ff 0%, transparent 55%),
+    radial-gradient(120% 140% at 100% 100%, #b07cff 0%, transparent 60%),
+    linear-gradient(135deg, #5b44ea, #7a5cf6 55%, #9c6bff);
+}
+
+.brand { display: flex; align-items: center; gap: 12px; font-size: 22px; font-weight: 650; letter-spacing: -.01em; }
+.brand img { width: 36px; height: 36px; }
+
+h1 { margin: 0; color: #fff; font-size: 66px; font-weight: 720; line-height: 1.04; letter-spacing: -.035em; }
+.sub { margin: 0; color: var(--muted); font-size: 23px; line-height: 1.4; letter-spacing: -.005em; }
+
+.field {
+  position: relative;
+  padding: 20px 26px;
+  border: 1px solid var(--edge);
+  border-radius: 16px;
+  background: var(--field);
+  font-size: 34px;
+  line-height: 1.35;
+  letter-spacing: -.01em;
+  white-space: nowrap;
+}
+.field.light { border-color: #dcdce2; background: #fff; color: #1d2330; }
+.field .label { display: block; margin-bottom: 6px; color: var(--muted); font-size: 15px; font-weight: 600; letter-spacing: .02em; text-transform: uppercase; }
+.field.light .label { color: #8a8f9c; }
+
+/* Carets drawn by art.js: the streak and ghosts sit behind the text. */
+[data-text] { position: relative; z-index: 1; }
+.streak, .ghost, .caret { position: absolute; pointer-events: none; }
+.streak { z-index: 0; clip-path: polygon(0 46%, 100% 0, 100% 100%, 0 54%); filter: blur(1.5px); }
+.ghost { z-index: 0; border-radius: 1px; }
+.caret { z-index: 2; border-radius: 2px; }
+
+/* The real popup (popup-frame.html), scaled up. */
+.popup {
+  position: absolute;
+  width: 300px;
+  overflow: hidden;
+  border-radius: 9px;
+  background: #212121;
+  box-shadow: 0 40px 90px rgba(0, 0, 0, .55), 0 12px 30px rgba(0, 0, 0, .35), 0 0 0 1px rgba(255, 255, 255, .09);
+  transform-origin: 0 0;
+}
+.popup iframe { display: block; width: 300px; height: 100%; border: 0; }
