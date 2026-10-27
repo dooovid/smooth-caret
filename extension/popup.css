@@ -1,6 +1,6 @@
 /* Look and components from dooovid/SmoothCursorExtension's popup.
    Everything hangs off .ui, so the same sheet styles the extension popup and
-   the injected menu's shadow root (inject/menu.js). */
+   the injected menu's shadow root (dev/inject/menu.js). */
 .ui {
   interpolate-size: allow-keywords;
   color-scheme: dark;

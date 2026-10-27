@@ -1,6 +1,6 @@
 // The settings UI: tabs, switches, sliders, the easing dropdown and the color
 // picker with rainbow mode. The extension popup (popup.js) and the injectable
-// menu (inject/menu.js) both mount it on the markup in popup.html's .ui block.
+// menu (dev/inject/menu.js) both mount it on the markup in popup.html's .ui block.
 //
 // scope: the Document or ShadowRoot holding that markup.
 // env:

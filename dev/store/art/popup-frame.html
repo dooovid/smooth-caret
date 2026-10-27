@@ -22,9 +22,9 @@
     tabs: { query: (_, cb) => cb([{ url: `https://${q.get('site') || 'github.com'}/` }]) },
   };
   const xhr = new XMLHttpRequest();
-  xhr.open('GET', '../../extension/popup.html', false);
+  xhr.open('GET', '../../../extension/popup.html', false);
   xhr.send();
-  document.write(xhr.responseText.replace('<head>', '<head><base href="../../extension/">').replace(' autofocus', ''));
+  document.write(xhr.responseText.replace('<head>', '<head><base href="../../../extension/">').replace(' autofocus', ''));
 </script>
 </head>
 </html>

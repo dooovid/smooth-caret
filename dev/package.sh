@@ -1,14 +1,14 @@
 #!/bin/bash
-# Zips extension/ for the Chrome Web Store as store/smooth-caret-<version>.zip,
+# Zips extension/ for the Chrome Web Store as dev/store/smooth-caret-<version>.zip,
 # with manifest.json at the root of the zip. Upload that file in the developer
 # dashboard. The version comes from extension/manifest.json.
 #
-#   store/package.sh
+#   dev/package.sh
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 VERSION=$(node -p "require('./extension/manifest.json').version")
-ZIP="store/smooth-caret-$VERSION.zip"
+ZIP="dev/store/smooth-caret-$VERSION.zip"
 rm -f "$ZIP"
 
 # Everything in extension/ except dotfiles (.DS_Store and friends) and anything

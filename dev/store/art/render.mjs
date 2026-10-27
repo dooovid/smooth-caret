@@ -1,9 +1,9 @@
-// Renders the Chrome Web Store images into store/ from the pages in this folder,
+// Renders the Chrome Web Store images into dev/store/ from the pages in this folder,
 // with headless Chrome driven over the DevTools protocol. The popup in the
 // screenshots is the real extension/popup.html, so re-run this after changing
 // the popup.
 //
-//   node store/art/render.mjs
+//   node dev/store/art/render.mjs
 import { spawn } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -73,7 +73,7 @@ try {
       format: 'png', clip: { x: 0, y: 0, width, height, scale: 1 },
     });
     writeFileSync(join(here, '..', out), Buffer.from(data, 'base64'));
-    console.log(`store/${out}`);
+    console.log(`dev/store/${out}`);
   }
   await send('Browser.close').catch(() => {});
 } finally {

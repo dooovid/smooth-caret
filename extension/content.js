@@ -33,7 +33,7 @@
     rainbowSpeed: 3, // 1 is a 10s lap round the hue wheel, 10 is 1s
   };
   const TEST = !!globalThis.__SMOOTHCARET_TEST__;
-  // The extension's chrome.*, or the stand-in inject/build.mjs passes in when
+  // The extension's chrome.*, or the stand-in dev/inject/build.mjs passes in when
   // this runs pasted into a page.
   const ext = typeof chrome !== 'undefined' ? chrome : undefined;
   const SELECTED = { selected: true };

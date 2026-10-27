@@ -1,4 +1,4 @@
-/* The injected menu's window (inject/menu.js). Everything inside it is styled
+/* The injected menu's window (dev/inject/menu.js). Everything inside it is styled
    by extension/popup.css, which the build puts ahead of this. */
 .window {
   position: fixed;

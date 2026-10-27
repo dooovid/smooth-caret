@@ -4,7 +4,7 @@ Everything the developer dashboard asks for, tab by tab. Paste the text in the b
 
 ## Package
 
-Upload `store/smooth-caret-<version>.zip`, made by `store/package.sh`.
+Upload `dev/store/smooth-caret-<version>.zip`, made by `dev/package.sh`.
 
 ## Store listing tab
 
@@ -52,7 +52,7 @@ Open source: https://github.com/dooovid/smooth-caret
 
 **Language:** English
 
-**Graphic assets** (all in `store/`)
+**Graphic assets** (all in `dev/store/`)
 
 | Field | File |
 | --- | --- |
