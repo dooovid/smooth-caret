@@ -1,11 +1,12 @@
 {
   "manifest_version": 3,
-  "name": "Smooth Caret",
+  "name": "Smooth Caret – Smooth Typing Cursor for Any Site",
   "version": "1.0.0",
-  "description": "A smooth, gliding text caret on every site, in inputs, textareas and rich editors. Set its speed, easing, width and color.",
+  "description": "Smooth typing on any website: your text cursor glides as you type, like in Microsoft Word. Set its speed, easing and color.",
   "homepage_url": "https://github.com/dooovid/smooth-caret",
   "permissions": ["storage", "activeTab"],
   "action": {
+    "default_title": "Smooth Caret",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/16.png",

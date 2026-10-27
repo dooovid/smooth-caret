@@ -10,13 +10,15 @@ Upload `store/smooth-caret-<version>.zip`, made by `store/package.sh`.
 
 **Title** and **summary** come from `extension/manifest.json` and can't be edited in the dashboard:
 
-- Title: `Smooth Caret`
-- Summary: `A smooth, gliding text caret on every site, in inputs, textareas and rich editors. Set its speed, easing, width and color.`
+- Title: `Smooth Caret – Smooth Typing Cursor for Any Site`
+- Summary: `Smooth typing on any website: your text cursor glides as you type, like in Microsoft Word. Set its speed, easing and color.`
+
+The title leads with the brand and then the words people search for ("smooth typing", "cursor"). The store's keyword-spam rule (Yellow Argon) rejects lists of sites or brands, and any keyword repeated more than 5 times. So the description names kinds of fields instead of sites, and mentions Word once, as a comparison.
 
 **Description**
 
 ```text
-Smooth Caret replaces the blinking text caret on every website with one that glides. When you type, click or use the arrow keys, the caret slides to its new spot instead of jumping there.
+Smooth Caret brings smooth typing to every website. Your text cursor glides to each new spot as you type, click or use the arrow keys, the way it does in Microsoft Word, instead of jumping there.
 
 WORKS WHEREVER YOU TYPE
 • Search boxes, forms and comment fields
@@ -29,15 +31,15 @@ Open the toolbar popup and try every change live in its test field:
 • Glide: how long the caret takes to arrive, from instant to slow and floaty
 • Easing: Ease Out, Ease In & Out, Spring or Linear
 • Width: 1 to 6 pixels
-• Color: any color and opacity, an eyedropper, or Match text to keep each site's own caret color
+• Color: any color and opacity, an eyedropper, or Match text to keep each site's own color
 • Rainbow: cycles through the hues at the speed you pick
 • Blink on or off
 • Turn it off on one site, or everywhere, with a single switch
 
 STAYS OUT OF THE WAY
-• It asks the browser where the real caret is, so it lines up exactly, even with unusual padding, scaled elements, scrolling and wrapped lines.
-• Scrolling carries the caret with the text. Only real caret movement glides.
-• Where an editor draws its own caret (code editors, Google Docs) it leaves the native caret alone.
+• It asks the browser exactly where you're typing, so it lines up perfectly, even with unusual padding, scaled elements, scrolling and wrapped lines.
+• Scrolling carries the cursor with the text. Only real movement glides.
+• Code editors and Google Docs draw their own cursor, so it leaves those alone. For smooth typing in Google Docs, see Silk Type by the same developer.
 
 PRIVATE
 Smooth Caret runs entirely in your browser. It collects nothing and sends nothing: no accounts, no analytics, no network requests. The only thing it stores is your settings. In password fields it measures placeholder dots instead of your password.
