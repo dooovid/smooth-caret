@@ -823,6 +823,111 @@
         }
       }
 
+      // ---------- Google Docs ----------
+
+      // Docs paints the document on a canvas and draws its own cursor
+      // (.kix-cursor, whose .kix-cursor-caret is a left border), so evaluate()
+      // finds no field to measure and steps aside. Instead, Docs' cursor gets a CSS
+      // transition whose timing curve is step()'s, so it glides like it does
+      // everywhere else, plus the width, color and blink settings. Only your own
+      // cursor: Docs gives it a blink class while the document has focus, and it's
+      // tagged so the styles stay while you type. Collaborators' cursors keep
+      // their colors. If Docs renames these classes, nothing matches and Docs'
+      // cursor just carries on as before.
+      const DOCS = (location.hostname === 'docs.google.com' && location.pathname.startsWith('/document/'))
+        || (TEST && !!globalThis.__SMOOTHCARET_DOCS__);
+      const OWN = '[data-smooth-caret]';
+      let docsLook = null; // width, color and blink
+      let docsMotion = null; // the transition, off while the document scrolls
+      let docsColor = null;
+      let docsOwn = null;
+      let docsTimer = 0;
+      let docsRaf = 0;
+      let docsScrolling = 0;
+
+      function updateDocs() {
+        const on = isOn();
+        if (on && !docsLook) {
+          docsLook = new CSSStyleSheet();
+          docsMotion = new CSSStyleSheet();
+          // Docs scrolls its editor to follow the cursor. A running transition
+          // would make the cursor trail the text, so it's switched off (which also
+          // lands any glide in flight) until the scrolling stops.
+          addEventListener('scroll', () => {
+            if (!docsMotion || docsLook.disabled) return;
+            docsMotion.disabled = true;
+            clearTimeout(docsScrolling);
+            docsScrolling = setTimeout(() => {
+              docsMotion.disabled = !isOn();
+            }, 150);
+          }, true);
+        }
+        if (!docsLook) return;
+        docsLook.disabled = docsMotion.disabled = !on;
+        clearInterval(docsTimer);
+        cancelAnimationFrame(docsRaf);
+        docsTimer = docsRaf = 0;
+        if (!on) return;
+
+        const { timing, ms } = easingCss();
+        const glide = ['left', 'top', 'transform'].map((p) => `${p} ${ms}ms ${timing}`).join(', ');
+        docsMotion.replaceSync(ms ? `
+          ${OWN} { transition: ${glide} !important; }
+          ${OWN} .kix-cursor-caret { transition: height ${ms}ms ${timing} !important; }
+        ` : '');
+        docsLook.replaceSync(`
+          ${OWN} .kix-cursor-caret { border-left-width: ${settings.width}px !important; }
+          ${OWN} .kix-cursor-caret {}
+          ${settings.blink ? '' : `
+            .docs-text-ui-cursor-blink, .docs-text-ui-cursor-blink .kix-cursor-caret { animation: none !important; opacity: 1 !important; }
+            .docs-text-ui-cursor-blink .kix-cursor-caret { visibility: visible !important; }
+          `}
+        `);
+        // Set through the CSSOM rather than written into the CSS text, so a color
+        // that isn't valid CSS is just ignored.
+        docsColor = docsLook.cssRules[1].style;
+        if (settings.colorMode === 'custom') {
+          const paint = () => {
+            docsColor.setProperty('border-color', settings.rainbow ? rainbowColor() : settings.color, 'important');
+            if (settings.rainbow) docsRaf = requestAnimationFrame(paint);
+          };
+          paint();
+        }
+        docsTimer = setInterval(trackDocsCursor, 250);
+        trackDocsCursor();
+      }
+
+      // Finds your cursor (the one with the blink class) and tags it, and keeps
+      // the two sheets adopted in case Docs replaces the document's list.
+      function trackDocsCursor() {
+        const sheets = document.adoptedStyleSheets;
+        if (!sheets.includes(docsLook)) document.adoptedStyleSheets = [...sheets, docsMotion, docsLook];
+        const blink = document.querySelector('.docs-text-ui-cursor-blink');
+        const own = blink && (blink.closest('.kix-cursor') || blink);
+        if (own && own !== docsOwn) {
+          if (docsOwn) docsOwn.removeAttribute('data-smooth-caret');
+          docsOwn = own;
+          own.setAttribute('data-smooth-caret', '');
+        }
+      }
+
+      // step()'s path for one jump from rest with the current settings, as a CSS
+      // linear() timing function, and how long it takes to settle.
+      function easingCss() {
+        const dt = 1 / 120;
+        const st = { pos: null };
+        step(st, { x: 0, y: 0, h: 0 }, 0);
+        const xs = [0];
+        while (xs.length < 1200 && (xs.length === 1 || st.pos.x !== 20)) {
+          step(st, { x: 20, y: 0, h: 0 }, dt);
+          xs.push(st.pos.x / 20);
+        }
+        if (xs.length < 3) return { ms: 0 };
+        const n = Math.min(40, xs.length - 1);
+        const points = Array.from({ length: n + 1 }, (_, i) => +xs[Math.round((i * (xs.length - 1)) / n)].toFixed(4));
+        return { timing: `linear(${points.join(', ')})`, ms: Math.round((xs.length - 1) * dt * 1000) };
+      }
+
       // ---------- settings ----------
 
       function topHostname() {
@@ -848,6 +953,7 @@
         if (active && caretEl) caretEl.style.background = colorFor(active);
         lastCaret = '';
         evaluate();
+        if (DOCS) updateDocs();
       }
 
       function loadSettings() {

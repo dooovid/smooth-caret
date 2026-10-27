@@ -24,6 +24,7 @@ WORKS WHEREVER YOU TYPE
 • Search boxes, forms and comment fields
 • Textareas, long wrapped text included
 • Rich editors: email, chat, notes and writing apps
+• Google Docs, with the same glide, width and color settings
 • Fields inside iframes, shadow DOM and dialogs
 
 MAKE IT YOURS
@@ -39,7 +40,7 @@ Open the toolbar popup and try every change live in its test field:
 STAYS OUT OF THE WAY
 • It asks the browser exactly where you're typing, so it lines up perfectly, even with unusual padding, scaled elements, scrolling and wrapped lines.
 • Scrolling carries the cursor with the text. Only real movement glides.
-• Code editors and Google Docs draw their own cursor, so it leaves those alone. For smooth typing in Google Docs, see Silk Type by the same developer.
+• Code editors draw their own cursor, so it leaves those alone.
 
 PRIVATE
 Smooth Caret runs entirely in your browser. It collects nothing and sends nothing: no accounts, no analytics, no network requests. The only thing it stores is your settings. In password fields it measures placeholder dots instead of your password.
@@ -118,5 +119,5 @@ https://github.com/dooovid/smooth-caret/blob/main/PRIVACY.md
 ## Test instructions tab
 
 ```text
-No account or setup needed. After installing, click into any text field (for example the search box on google.com, or a comment box), then type, click around and use the arrow keys: the caret glides to each new position instead of jumping. Click the toolbar icon to open the settings popup. It has its own test field at the top, and every change applies live in that field and in every open tab.
+No account or setup needed. After installing, click into any text field (for example the search box on google.com, or a comment box), then type, click around and use the arrow keys: the caret glides to each new position instead of jumping. It works the same way in a Google Docs document. Click the toolbar icon to open the settings popup. It has its own test field at the top, and every change applies live in that field and in every open tab.
 ```

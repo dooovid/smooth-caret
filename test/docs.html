@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Smooth Caret: Google Docs mock</title>
+<script>
+  // Runs content.js as a page script in Google Docs mode, on a stand-in for
+  // Docs' cursor markup: a scrolling .kix-appview-editor, your .kix-cursor
+  // (with the blink class Docs gives it while the document has focus) and a
+  // collaborator's. Its .kix-cursor-caret is a left border, as in Docs. Type
+  // or use the arrow keys to move your cursor; the blink class drops while you
+  // type, like in Docs. runDocsChecks() in the console checks the styling.
+  window.__SMOOTHCARET_TEST__ = true;
+  window.__SMOOTHCARET_DOCS__ = true;
+  window.chrome = {
+    storage: {
+      local: { get: (defaults, cb) => cb({ ...defaults }), set() {} },
+      onChanged: { addListener() {} },
+    },
+  };
+</script>
+<script>
+  document.write(`<script src="../extension/content.js?${Date.now()}"><\/script>`);
+</script>
+<style>
+  body { margin: 0; background: #f9fbfd; font: 14px system-ui, sans-serif; }
+  p { margin: 12px 24px; color: #555; }
+  .kix-appview-editor { position: relative; height: 420px; margin: 0 24px; overflow: auto; border: 1px solid #ddd; background: #eef1f4; }
+  .page { position: relative; width: 640px; height: 1600px; margin: 16px auto; background: #fff; box-shadow: 0 1px 3px #0002; }
+  .line { position: absolute; left: 72px; font: 15px/18px Arial, sans-serif; white-space: pre; }
+  .kix-cursor { position: absolute; }
+  .kix-cursor-caret { position: absolute; width: 0; border-left: 2px solid; }
+  .kix-cursor-name { position: absolute; top: -16px; padding: 0 3px; color: #fff; font-size: 11px; white-space: nowrap; }
+  .docs-text-ui-cursor-blink { animation: docs-blink 1s step-end infinite; }
+  @keyframes docs-blink { 50% { opacity: 0; } }
+</style>
+</head>
+<body>
+<p>Click the editor, then type or use the arrow keys. Scroll to check the cursor moves with the text.</p>
+<div class="kix-appview-editor" id="editor" tabindex="0">
+  <div class="page">
+    <div class="line" style="top: 96px">The quick brown fox jumps over the lazy dog.</div>
+    <div class="line" style="top: 114px">Pack my box with five dozen liquor jugs.</div>
+    <div class="line" style="top: 132px">How vexingly quick daft zebras jump!</div>
+    <div class="kix-cursor docs-text-ui-cursor-blink" id="own" style="left: 72px; top: 96px">
+      <div class="kix-cursor-caret" style="border-color: rgb(0, 0, 0); height: 18px"></div>
+    </div>
+    <div class="kix-cursor" id="peer" style="left: 200px; top: 132px">
+      <div class="kix-cursor-name" style="background: #e8710a">Ada</div>
+      <div class="kix-cursor-caret" style="border-color: rgb(232, 113, 10); height: 18px"></div>
+    </div>
+  </div>
+</div>
+<script>
+  const own = document.getElementById('own');
+  const editor = document.getElementById('editor');
+  let x = 72;
+  let y = 96;
+  let blinkTimer = 0;
+  // Like Docs: the cursor's left/top move, and it stops blinking while you type.
+  function moveTo(nx, ny) {
+    x = nx;
+    y = ny;
+    own.style.left = `${x}px`;
+    own.style.top = `${y}px`;
+    own.classList.remove('docs-text-ui-cursor-blink');
+    clearTimeout(blinkTimer);
+    blinkTimer = setTimeout(() => own.classList.add('docs-text-ui-cursor-blink'), 500);
+  }
+  editor.addEventListener('keydown', (e) => {
+    const k = e.key;
+    if (k === 'ArrowRight' || k.length === 1) moveTo(x + 8.3, y);
+    else if (k === 'ArrowLeft') moveTo(Math.max(72, x - 8.3), y);
+    else if (k === 'ArrowDown') moveTo(x, y + 18);
+    else if (k === 'ArrowUp') moveTo(x, Math.max(96, y - 18));
+    else if (k === 'End') moveTo(380, y);
+    else if (k === 'Home') moveTo(72, y);
+    else return;
+    e.preventDefault();
+  });
+
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const transitionOf = (el) => el.getAnimations().find((a) => a.transitionProperty === 'left');
+
+  window.runDocsChecks = async () => {
+    const D = __smoothCaretDebug;
+    const out = {};
+    const caret = own.querySelector('.kix-cursor-caret');
+    const peerCaret = document.querySelector('#peer .kix-cursor-caret');
+    D.set({ colorMode: 'auto', rainbow: false, width: 2, duration: 150, easing: 'ease-out', blink: true });
+    await wait(300);
+    out.tagged = own.hasAttribute('data-smooth-caret');
+    out.peerTagged = document.getElementById('peer').hasAttribute('data-smooth-caret');
+
+    // Glide: a 100px jump, sampled at the transition's own clock.
+    moveTo(x + 100, y);
+    const t = transitionOf(own);
+    out.stillTaggedWhileTyping = own.hasAttribute('data-smooth-caret') && !own.classList.contains('docs-text-ui-cursor-blink');
+    out.transition = t && { duration: t.effect.getTiming().duration, easing: t.effect.getTiming().easing.slice(0, 20) };
+    if (t) {
+      t.pause();
+      const at = (ms) => {
+        t.currentTime = ms;
+        return +(parseFloat(getComputedStyle(own).left) - (x - 100)).toFixed(1);
+      };
+      out.leftAt = { 0: at(0), 50: at(50), 150: at(150), [t.effect.getTiming().duration]: at(t.effect.getTiming().duration) };
+      t.finish();
+    }
+    out.peerHasTransition = !!transitionOf(document.getElementById('peer'));
+
+    // Width and color: yours only.
+    D.set({ width: 4, colorMode: 'custom', color: '#ff00aa' });
+    out.ownCaret = { width: getComputedStyle(caret).borderLeftWidth, color: getComputedStyle(caret).borderLeftColor };
+    out.peerCaret = { width: getComputedStyle(peerCaret).borderLeftWidth, color: getComputedStyle(peerCaret).borderLeftColor };
+
+    // Rainbow changes the color over time.
+    D.set({ rainbow: true, rainbowSpeed: 10 });
+    const c1 = getComputedStyle(caret).borderLeftColor;
+    await wait(250);
+    out.rainbowMoves = c1 !== getComputedStyle(caret).borderLeftColor;
+    D.set({ rainbow: false });
+
+    // Blink off overrides Docs' blink animation.
+    D.set({ blink: false });
+    await wait(600);
+    out.blinkOff = getComputedStyle(own).animationName;
+    D.set({ blink: true });
+    out.blinkOn = getComputedStyle(own).animationName;
+
+    // Scrolling turns the glide off until it stops.
+    editor.scrollTop = 200;
+    await wait(30);
+    moveTo(x + 50, y);
+    out.transitionWhileScrolling = !!transitionOf(own);
+    await wait(300);
+    moveTo(x + 50, y);
+    out.transitionAfterScrolling = !!transitionOf(own);
+    editor.scrollTop = 0;
+
+    // Off for this site: Docs' own cursor, untouched.
+    D.set({ enabled: false });
+    out.offCaret = { width: getComputedStyle(caret).borderLeftWidth, color: getComputedStyle(caret).borderLeftColor };
+    moveTo(x + 50, y);
+    out.offTransition = !!transitionOf(own);
+    D.set({ enabled: true, colorMode: 'auto', width: 2 });
+    moveTo(72, 96);
+    return out;
+  };
+</script>
+</body>
+</html>

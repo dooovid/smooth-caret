@@ -1,6 +1,6 @@
 # Smooth Caret privacy policy
 
-*Last updated: October 23, 2026*
+*Last updated: October 26, 2026*
 
 Smooth Caret is a Chrome extension that draws a smooth, gliding caret in the text field you're typing in. It works entirely inside your browser.
 
@@ -11,6 +11,8 @@ To draw its caret exactly where the real one is, the extension reads, while a fi
 - the field's text and styles, so it can lay the text out the same way and measure where the caret sits. In password fields it lays out placeholder characters of the same length instead, so your password never goes into its measuring copy and is never kept;
 - the caret's position, plus your clicks and End/arrow key presses inside that field, to know which side of a line wrap the caret belongs on;
 - the site's hostname, to check whether you've turned the extension off there.
+
+In Google Docs it doesn't read the document at all. It only restyles Docs' own cursor so that it glides.
 
 All of this stays in memory on your device, is used only to draw the caret, and is gone as soon as the caret moves on. None of it is saved.
 

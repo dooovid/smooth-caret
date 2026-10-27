@@ -44,7 +44,11 @@ The overlay is also CSS-anchored (`position-anchor`) to whatever element has foc
 It leaves the native caret alone where it can't, or shouldn't, take over:
 
 - `email` and `number` inputs, which don't expose `selectionStart`.
-- Editors that hide the caret to draw their own (CodeMirror, Monaco, Ace, Google Docs).
+- Editors that hide the caret to draw their own (CodeMirror, Monaco, Ace).
+
+### Google Docs
+
+Docs paints its document on a canvas and draws its own cursor, `.kix-cursor`, whose `.kix-cursor-caret` is a left border. There's no field to measure, so the extension styles Docs' cursor instead. It gets a CSS transition whose `linear()` timing curve is sampled from the same animation code, so every easing mode and glide time behaves the same as elsewhere. Your width, color, rainbow and blink settings apply too. Only your own cursor is touched: Docs gives it the `docs-text-ui-cursor-blink` class while the document has focus, and the extension tags it with `data-smooth-caret` so the styles stay on while you type and that class is gone. Collaborators' cursors keep their colors. Docs scrolls its editor to follow the cursor, so the transition switches off while it scrolls, and the cursor moves with the text instead of trailing it. If Google renames these classes, nothing matches and Docs' own cursor carries on unchanged.
 - Read-only fields.
 
 ## Accuracy test
@@ -59,7 +63,7 @@ python3 -m http.server 8765
 
 Then run `runChecks()` in the console. For every caret position in every field, it asks the extension where the caret is, then asks Chrome (`document.caretPositionFromPoint(...).getClientRect()`) which offset is at that point and where Chrome would draw it. Current result: 1,049 positions, 0 mismatches, worst error 0.34px.
 
-`test/popup.html` previews the popup outside the extension. `test/inject.html` runs the pasted-in build on a page with a strict Content-Security-Policy.
+`test/popup.html` previews the popup outside the extension. `test/inject.html` runs the pasted-in build on a page with a strict Content-Security-Policy. `test/docs.html` mocks Google Docs' cursor markup; type in it to watch the cursor glide, or run `await runDocsChecks()` to check the transition curve, which cursor gets styled, and the scrolling and off-switch behavior.
 
 ## Publishing an update
 
