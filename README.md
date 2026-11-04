@@ -6,7 +6,7 @@ A smooth, gliding text caret on every site. When you type, click or use the arro
 
 ## Install in Chrome
 
-**Chrome Web Store:** coming soon.
+**[Install from the Chrome Web Store](https://chromewebstore.google.com/detail/smooth-caret/hdghohaibiopphhalknjindnpghhhkkh)**
 
 **Developer install:** download this repo (**Code → Download ZIP**, then unzip it). Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked** and pick the `extension` folder. There's nothing to build.
 
