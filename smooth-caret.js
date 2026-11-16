@@ -416,7 +416,26 @@
 
       // ---------- geometry ----------
 
-      function readBox(el) {
+      // The field's padding box: where it starts inside the border box, and its
+      // size. For an <input>, newer Chrome answers clientLeft and clientWidth for
+      // the inner editor (the part that scrolls sideways), so the left padding is
+      // inside clientLeft and missing from clientWidth. Borders give the same box
+      // on every version. Other elements keep client*, which leaves scrollbars out.
+      function paddingBox(el, cs) {
+        if (el.localName !== 'input') {
+          return { cl: el.clientLeft, ct: el.clientTop, cw: el.clientWidth, ch: el.clientHeight };
+        }
+        const cl = num(cs.borderLeftWidth);
+        const ct = num(cs.borderTopWidth);
+        return {
+          cl,
+          ct,
+          cw: Math.max(0, el.offsetWidth - cl - num(cs.borderRightWidth)),
+          ch: Math.max(0, el.offsetHeight - ct - num(cs.borderBottomWidth)),
+        };
+      }
+
+      function readBox(el, cs) {
         const r = el.getBoundingClientRect();
         return {
           left: r.left,
@@ -425,10 +444,7 @@
           // on-screen size to its layout size recovers that scale.
           sx: el.offsetWidth ? r.width / el.offsetWidth : 1,
           sy: el.offsetHeight ? r.height / el.offsetHeight : 1,
-          cl: el.clientLeft,
-          ct: el.clientTop,
-          cw: el.clientWidth,
-          ch: el.clientHeight,
+          ...paddingBox(el, cs),
           sl: el.scrollLeft,
           st: el.scrollTop,
         };
@@ -523,8 +539,8 @@
         if (k == null) return null;
         if (k !== el.selectionEnd) return SELECTED;
         const value = fieldText(el, st.cs);
-        const cw = el.clientWidth;
-        const ch = el.clientHeight;
+        const cw = box.cw;
+        const ch = box.ch;
         if (st.n % 30 === 0) {
           const sig = styleSig(st.cs);
           if (sig !== st.sig) {
@@ -537,7 +553,7 @@
           st.k = k;
           st.cw = cw;
           st.ch = ch;
-          st.cache = layoutField(st.el, st.cs, value, k);
+          st.cache = layoutField(st.el, st.cs, value, k, box);
         }
         const t = st.cache;
         if (!t || !t.up || !st.hint) return t;
@@ -572,7 +588,7 @@
       // Lays the field's text out in the mirror and returns the caret at offset k
       // as {x, y, h} relative to the field's padding box, ignoring scroll. At a
       // soft wrap, `up` is the same caret drawn at the end of the upper line.
-      function layoutField(el, cs, value, k) {
+      function layoutField(el, cs, value, k, box) {
         const isInput = el.localName === 'input';
         const padL = num(cs.paddingLeft);
         const padR = num(cs.paddingRight);
@@ -585,7 +601,7 @@
           if (v) css += `${p}:${v};`;
         }
         css += isInput ? 'white-space:pre;' : `white-space:${cs.getPropertyValue('white-space') || 'pre-wrap'};`;
-        css += `width:${Math.max(0, el.clientWidth - padL - padR)}px;`;
+        css += `width:${Math.max(0, box.cw - padL - padR)}px;`;
         if (css !== lastMirrorCss) {
           lastMirrorCss = css;
           mirrorEl.style.cssText = css;
@@ -607,7 +623,7 @@
         const m = mirrorEl.getBoundingClientRect();
         const rtl = cs.direction === 'rtl';
         // Inputs center their single line vertically in the content box.
-        const dy = isInput ? padT + (el.clientHeight - padT - padB - m.height) / 2 : padT;
+        const dy = isInput ? padT + (box.ch - padT - padB - m.height) / 2 : padT;
         const caret = { x: padL + (rtl ? r.right : r.left) - m.left, y: r.top - m.top + dy, h: r.height };
 
         if (!isInput && k > 0 && text.charCodeAt(k - 1) !== 10) {
@@ -726,7 +742,7 @@
           st.n++;
           if (st.n % 30 === 0) st.clippers = clippers(st.el);
 
-          const box = readBox(st.el);
+          const box = readBox(st.el, st.cs);
           const target = st.kind === 'field' ? fieldTarget(st, box) : editableTarget(st, box);
           const clip = target && target !== SELECTED ? clipBox(st, box) : null;
           if (!clip) {
@@ -1016,10 +1032,10 @@
           // Where the caret would sit right now for el, in viewport coordinates.
           target(el) {
             ensureBuilt();
-            const box = readBox(el);
             const cs = getComputedStyle(el);
+            const box = readBox(el, cs);
             const t = kindOf(el) === 'field'
-              ? layoutField(el, cs, fieldText(el, cs), el.selectionStart)
+              ? layoutField(el, cs, fieldText(el, cs), el.selectionStart, box)
               : editableTarget({ el }, box);
             if (!t || t === SELECTED) return null;
             const toViewport = (c) => ({
