@@ -94,7 +94,7 @@ When the user opens the toolbar popup, the extension reads the current tab's URL
 Host permission (the dashboard lists the content script's <all_urls> match here):
 
 ```text
-The extension draws its caret in whatever text field the user is typing in, so its content script has to run on every site. It runs in all frames, including about:blank and srcdoc frames, because many rich text editors (email composers, CMS and forum editors) put their editable area in an iframe. The script only reads the focused field's text layout and caret position, in memory, to draw the caret on top of it. It makes no network requests and sends no data anywhere.
+The extension draws its caret in whatever text field the user is typing in, so its content script has to run on every site. It runs in all frames, including about:blank and srcdoc frames, because many rich text editors (email composers, CMS and forum editors) put their editable area in an iframe. The script only reads the focused field's text layout and caret position, in memory, to draw the caret on top of it. Email fields don't report their caret position, so while one has focus the script treats it as a plain text field and keeps the page's styles and validation as they were. A second, small script runs in the page's own context only so the page's code still sees an email field. Neither makes network requests or sends data anywhere.
 ```
 
 **Are you using remote code?** No, I am not using remote code.

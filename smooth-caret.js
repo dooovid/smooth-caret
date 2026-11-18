@@ -52,6 +52,35 @@
     }
   }
 
+  // ---------- page side (extension/page.js); a paste runs in the page's world ----------
+  // Smooth Caret, page side: runs in the page's own JavaScript world. content.js
+  // runs in the extension's isolated world, where changes to built-in objects
+  // aren't visible to the page's scripts.
+  //
+  // While you type in an email field, content.js gives it a made-up type so
+  // Chrome hands out its caret position, and tags it data-smooth-caret-email
+  // (see "email fields" in content.js). The page's scripts should still see an
+  // email field, so a tagged field's `type` property says "email". Every other
+  // input gets the browser's own answer.
+  (() => {
+    'use strict';
+    if (globalThis.__smoothCaretPageLoaded) return;
+    globalThis.__smoothCaretPageLoaded = true;
+
+    const proto = HTMLInputElement.prototype;
+    const type = Object.getOwnPropertyDescriptor(proto, 'type');
+    if (!type || !type.get) return;
+    const realType = type.get;
+    const hasAttribute = Element.prototype.hasAttribute;
+    Object.defineProperty(proto, 'type', {
+      ...type,
+      get() {
+        const t = realType.call(this);
+        return t === 'text' && hasAttribute.call(this, 'data-smooth-caret-email') ? 'email' : t;
+      },
+    });
+  })();
+
   // ---------- caret (extension/content.js), handed the stand-in chrome ----------
   ((chrome) => {
     // Smooth Caret: draws a gliding caret over whichever text field has focus.
@@ -288,8 +317,10 @@
         if (!el) return null;
         const tag = el.localName;
         if (tag === 'textarea') return el.readOnly || el.disabled ? null : 'field';
-        // email, number and friends report selectionStart === null, so we can't
-        // know where their caret is; those keep the native one.
+        // number and friends report selectionStart === null, so we can't know
+        // where their caret is; those keep the native one. Email fields report it
+        // too, but they're plain text fields while they have focus (see "email
+        // fields" below), so by the time we get here they pass.
         if (tag === 'input') {
           return typeof el.selectionStart === 'number' && !el.readOnly && !el.disabled ? 'field' : null;
         }
@@ -324,6 +355,9 @@
       }
 
       function evaluate() {
+        // Focus has left the email field, or we've been switched off. Losing
+        // window focus doesn't count: the field still has focus inside the page.
+        if (email && (!isOn() || deepActive() !== email.el)) stopEmail();
         const el = isOn() && (TEST || document.hasFocus()) ? deepActive() : null;
         if (active && active.el === el) {
           loop();
@@ -638,6 +672,125 @@
         return caret;
       }
 
+      // ---------- email fields ----------
+
+      // Chrome won't say where the caret is in <input type="email">
+      // (selectionStart is null), because the text you edit and the field's value
+      // can differ: Unicode domains are stored as punycode, and spaces get
+      // trimmed. So while an email field has focus it gets a made-up type, which
+      // Chrome treats as plain text, and it's type="email" again once focus
+      // leaves. The page shouldn't notice:
+      // - Styles: every rule that targets [type=email] also targets the tag the
+      //   field wears meanwhile. The rule is edited in place, so :focus, :invalid,
+      //   the cascade order and :not([type=email]) all behave as before. The type
+      //   is made up rather than "text" so the page's [type=text] rules don't
+      //   start applying.
+      // - Validation: a hidden email input checks the value on every edit, and its
+      //   verdict, with Chrome's own message, becomes the field's custom validity.
+      //   So :invalid, checkValidity() and the bubble when Enter submits a bad
+      //   address work as before.
+      // - Scripts: page.js, in the page's own world, makes the tagged field's
+      //   `type` property say "email".
+      // Turning into a text field puts the caret at the start, so it's put back
+      // where Chrome would have: everything selected after Tab, otherwise where it
+      // was the last time the field had focus, or at the end if the page changed
+      // the value since. A click places the caret after this runs anyway.
+      const EMAIL_TAG = 'data-smooth-caret-email';
+      const EMAIL_TYPE = 'smooth-caret-email';
+      const EMAIL_SELECTOR = /\[\s*type\s*=\s*(["']?)email\1(?:\s+[is])?\s*\]/gi;
+      let email = null; // the field we've swapped, and what to put back
+      let emailCheck = null;
+      let tabbing = false; // a Tab press is moving focus right now
+      const emailCarets = new WeakMap(); // field -> value and selection when focus left
+
+      function startEmail(el) {
+        if (email && email.el !== el) stopEmail();
+        if (email || !el || el.localName !== 'input' || el.type !== 'email') return;
+        if (el.readOnly || el.disabled || !isOn()) return;
+        patchEmailRules(el);
+        email = {
+          el,
+          type: el.getAttribute('type'),
+          inputMode: el.getAttribute('inputmode'),
+          // The page already sets its own message on this field; leave validity to it.
+          pageValidity: el.validity.customError,
+          msg: '',
+          checked: null,
+        };
+        el.setAttribute(EMAIL_TAG, '');
+        // Phones keep showing the keyboard with @ on it.
+        if (email.inputMode === null) el.setAttribute('inputmode', 'email');
+        el.setAttribute('type', EMAIL_TYPE);
+        const saved = emailCarets.get(el);
+        const end = el.value.length;
+        if (tabbing) el.select();
+        else if (saved && saved.value === el.value) el.setSelectionRange(...saved.sel);
+        else if (saved || el.value !== el.defaultValue) el.setSelectionRange(end, end);
+        syncEmailValidity();
+      }
+
+      function stopEmail() {
+        const { el, type, inputMode, msg, pageValidity } = email;
+        email = null;
+        if (typeof el.selectionStart === 'number') {
+          emailCarets.set(el, { value: el.value, sel: [el.selectionStart, el.selectionEnd, el.selectionDirection] });
+        }
+        // Only our own message: the page may have set one of its own since.
+        if (!pageValidity && msg && el.validationMessage === msg) el.setCustomValidity('');
+        // Unless the page changed the type itself meanwhile.
+        if (el.getAttribute('type') === EMAIL_TYPE) el.setAttribute('type', type);
+        el.removeAttribute(EMAIL_TAG);
+        if (inputMode === null) el.removeAttribute('inputmode');
+      }
+
+      // Asks a hidden real email input whether the value is a valid address. It
+      // gets the field's `multiple`, so comma-separated lists pass as they would.
+      function syncEmailValidity() {
+        if (!email || email.pageValidity) return;
+        const { el } = email;
+        const key = (el.multiple ? 'm:' : ':') + el.value;
+        if (key === email.checked) return;
+        email.checked = key;
+        if (!emailCheck) {
+          emailCheck = document.createElement('input');
+          emailCheck.type = 'email';
+        }
+        emailCheck.multiple = el.multiple;
+        emailCheck.value = el.value;
+        const msg = emailCheck.validity.typeMismatch ? emailCheck.validationMessage : '';
+        if (msg !== email.msg) {
+          email.msg = msg;
+          el.setCustomValidity(msg);
+        }
+      }
+
+      // The document's stylesheets, and the field's shadow root's if it's in one.
+      // Rules already edited are skipped, so running this on every focus is cheap.
+      function patchEmailRules(el) {
+        for (const root of new Set([document, el.getRootNode()])) {
+          if (!root.styleSheets) continue;
+          for (const sheet of [...root.styleSheets, ...(root.adoptedStyleSheets || [])]) patchRules(sheet);
+        }
+      }
+
+      function patchRules(sheetOrRule) {
+        let rules;
+        try {
+          rules = sheetOrRule.cssRules;
+        } catch {
+          return; // A stylesheet from another origin can't be read.
+        }
+        for (const rule of rules) {
+          const sel = rule.selectorText;
+          if (sel && !sel.includes(EMAIL_TAG)) {
+            const next = sel.replace(EMAIL_SELECTOR, (m) => `:is(${m}, [${EMAIL_TAG}])`);
+            if (next !== sel) rule.selectorText = next;
+          }
+          if (rule.cssRules) patchRules(rule); // @media, @supports, @layer, nesting
+          if (rule.styleSheet) patchRules(rule.styleSheet); // @import
+        }
+      }
+
       // ---------- contenteditable ----------
 
       function editableTarget(st, box) {
@@ -737,6 +890,8 @@
             return;
           }
           if (!paused) rafId = requestAnimationFrame(frame);
+          // Catches the page setting the value from script, which fires no input event.
+          if (email && email.el === st.el) syncEmailValidity();
           const dt = st.t ? Math.min(0.1, (now - st.t) / 1000) : 0;
           st.t = now;
           st.n++;
@@ -1006,7 +1161,24 @@
       };
       addEventListener('pointerdown', pointerHint, true);
       addEventListener('pointermove', pointerHint, true);
-      addEventListener('focusin', evaluate, true);
+      // Tab moves focus during this same keydown, so the flag is down again by the
+      // time a timer runs. See startEmail().
+      addEventListener('keydown', (e) => {
+        if (e.key !== 'Tab') return;
+        tabbing = true;
+        setTimeout(() => {
+          tabbing = false;
+        });
+      }, true);
+      addEventListener('focusin', () => {
+        startEmail(deepActive());
+        evaluate();
+        // evaluate() can turn the field down (the page draws its own caret, say),
+        // and then it may as well be an email field again.
+        if (email && (!active || active.el !== email.el)) stopEmail();
+      }, true);
+      // Runs before the page's own input handlers, so they see the new validity.
+      addEventListener('input', syncEmailValidity, true);
       addEventListener('focusout', () => queueMicrotask(evaluate), true);
       addEventListener('focus', (e) => e.target === window && evaluate());
       addEventListener('blur', (e) => e.target === window && setShown(false));

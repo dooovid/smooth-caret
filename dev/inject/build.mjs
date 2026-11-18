@@ -1,6 +1,7 @@
-// Builds smooth-caret.js at the repo's root: the caret (extension/content.js),
-// the settings UI (extension/ui.js with popup.html's markup and popup.css) and
-// the menu window (dev/inject/), as one script to run in a page or Electron app.
+// Builds smooth-caret.js at the repo's root: the caret (extension/content.js and
+// extension/page.js), the settings UI (extension/ui.js with popup.html's markup
+// and popup.css) and the menu window (dev/inject/), as one script to run in a
+// page or Electron app.
 //
 //   node dev/inject/build.mjs
 import { readFileSync, writeFileSync } from 'node:fs';
@@ -84,6 +85,8 @@ const out = `// Smooth Caret, injectable build: https://github.com/dooovid/smoot
   const UI_CSS = ${JSON.stringify(css)};
 
 ${indent(read('dev/inject/store.js'))}
+  // ---------- page side (extension/page.js); a paste runs in the page's world ----------
+${indent(read('extension/page.js'))}
   // ---------- caret (extension/content.js), handed the stand-in chrome ----------
   ((chrome) => {
 ${indent(indent(read('extension/content.js')))}
