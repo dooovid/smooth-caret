@@ -24,6 +24,7 @@
 </script>
 <script>
   // Fresh copy every load; the dev server lets the browser cache it.
+  document.write(`<script src="../../extension/page.js?${Date.now()}"><\/script>`);
   document.write(`<script src="../../extension/content.js?${Date.now()}"><\/script>`);
 </script>
 <style>
@@ -45,6 +46,14 @@
   #right { width: 100%; text-align: right; font: 16px monospace; padding: 8px; }
   #center { width: 100%; text-align: center; font: italic 18px Georgia, serif; padding: 8px; }
   #pw { width: 100%; padding: 8px; font-size: 16px; }
+  /* Styled only through [type="email"]. The last two rules would hit the email
+     field if it showed up as a text field while focused. */
+  .case input[type="email"] { width: 100%; padding: 8px 12px 6px 28px; font: 17px/1.2 'Courier New', monospace;
+                              letter-spacing: .6px; text-indent: 6px; border: 2px solid #9ad; border-radius: 8px; }
+  .case input[type="email"]:focus { background: #eef6ff; outline: none; }
+  .case input[type="email"]:invalid { border-color: #e55; }
+  .case input:not([type="email"]) { text-indent: 0; }
+  .case input[type="text"] { color: #c00; }
   #long { width: 100%; padding: 6px 10px; font-size: 15px; }
 
   .scaled { transform: scale(1.3) translate(30px, 4px); transform-origin: 0 0; width: 240px; height: 74px; }
@@ -87,6 +96,8 @@
   <div class="case"><b>Right aligned</b><input id="right" value="aligned right"></div>
   <div class="case"><b>Centered italic</b><input id="center" value="centered text"></div>
   <div class="case"><b>Password</b><input id="pw" type="password" value="hunter2hunter2"></div>
+  <div class="case"><b>Email: a text field while focused, styled by [type="email"]</b>
+    <input id="email" type="email" value="someone@example.com"></div>
 
   <div class="case"><b>Overflowing input (scrolls sideways)</b>
     <input id="long" value="This input has way more text than fits so it has to scroll horizontally as you move through it, all the way to the end"></div>
@@ -231,7 +242,7 @@ And here.</textarea></div></div>
   }
 
   window.runChecks = () => {
-    const ids = ['plain', 'padded', 'nested', 'right', 'center', 'pw', 'long', 'scaled', 'ta', 'ta-scroll', 'ta-upper', 'ta-clip'];
+    const ids = ['plain', 'padded', 'nested', 'right', 'center', 'pw', 'email', 'long', 'scaled', 'ta', 'ta-scroll', 'ta-upper', 'ta-clip'];
     const out = ids.map((id) => {
       const el = document.getElementById(id);
       el.scrollIntoView({ block: 'center' });
@@ -244,6 +255,52 @@ And here.</textarea></div></div>
     ce.scrollIntoView({ block: 'center' });
     out.push(checkEditable(ce));
     return out;
+  };
+
+  // Email fields are text fields while they have focus (see "email fields" in
+  // content.js). Focused, the field has to look, validate and report its type
+  // the same with the extension on as with it off, and be an email field again
+  // once focus leaves.
+  window.runEmailChecks = () => {
+    const el = document.getElementById('email');
+    const away = document.getElementById('plain');
+    const props = ['font', 'padding', 'letterSpacing', 'textIndent', 'color', 'borderTopColor', 'backgroundColor', 'width', 'height'];
+    const results = [];
+    const check = (name, ok, detail) => results.push(ok ? { name, ok } : { name, ok, detail });
+    const focused = (value) => {
+      away.focus();
+      el.value = value;
+      el.focus();
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      const cs = getComputedStyle(el);
+      return { look: props.map((p) => cs[p]), valid: el.checkValidity(), msg: el.validationMessage, type: el.type };
+    };
+    el.scrollIntoView({ block: 'center' });
+    for (const value of ['someone@example.com', 'not an address', 'a@b.c, d@e.f', '']) {
+      __smoothCaretDebug.set({ enabled: false });
+      const off = focused(value);
+      __smoothCaretDebug.set({ enabled: true });
+      const on = focused(value);
+      check(`${JSON.stringify(value)}: same look, validity, message and type`, JSON.stringify(off) === JSON.stringify(on), { off, on });
+      check(`${JSON.stringify(value)}: caret readable`, typeof el.selectionStart === 'number', el.selectionStart);
+    }
+
+    away.focus();
+    el.value = 'someone@example.com';
+    el.focus();
+    el.setSelectionRange(4, 4);
+    away.focus();
+    el.focus();
+    check('focus() puts the caret back where it was', el.selectionStart === 4 && el.selectionEnd === 4, [el.selectionStart, el.selectionEnd]);
+    away.focus();
+    el.value = 'changed@example.com';
+    el.focus();
+    check('focus() after the page changed the value puts it at the end', el.selectionStart === el.value.length, el.selectionStart);
+    away.focus();
+    check('type="email" again after blur, nothing left behind',
+      el.getAttribute('type') === 'email' && !el.hasAttribute('data-smooth-caret-email') && !el.hasAttribute('inputmode') && !el.validity.customError,
+      el.outerHTML);
+    return { passed: results.filter((r) => r.ok).length, failed: results.filter((r) => !r.ok) };
   };
 </script>
 </body>

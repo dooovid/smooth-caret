@@ -30,9 +30,21 @@ The overlay is also CSS-anchored (`position-anchor`) to whatever element has foc
 
 It leaves the native caret alone where it can't, or shouldn't, take over:
 
-- `email` and `number` inputs, which don't expose `selectionStart`.
+- `number` inputs, which don't expose `selectionStart`.
 - Editors that hide the caret to draw their own (CodeMirror, Monaco, Ace).
 - Read-only fields.
+
+### Email fields
+
+Chrome doesn't expose the caret position in `<input type="email">` either (`selectionStart` is `null`). The text you edit and the field's value can differ: Unicode domains are stored as punycode, and spaces get trimmed. Switching the field to `text` just to read the caret doesn't work, since changing to a type with a caret position moves the caret to the start.
+
+So while an email field has focus, it gets a made-up type, `smooth-caret-email`, which Chrome treats as plain text. It's `type="email"` again as soon as focus leaves. Switching to another tab or window doesn't count as focus leaving. The page shouldn't notice:
+
+- **Styles**: every stylesheet rule that targets `[type="email"]` is rewritten in place to `:is([type="email"], [data-smooth-caret-email])`, and the field wears that tag while it's swapped. `:focus`, `:invalid`, `:not([type="email"])` and the cascade order all behave as before. The type is made up rather than `text` so the page's `[type="text"]` rules don't start applying. Stylesheets from another origin can't be read, so their email rules aren't copied.
+- **Validation**: a hidden, real email input checks the value on every edit. Its verdict, with Chrome's own message, becomes the field's custom validity, so `:invalid`, `checkValidity()` and the bubble when Enter submits a bad address work as before. If the page already sets its own message on the field, validity is left to the page.
+- **Scripts**: `extension/page.js` runs in the page's own world (`"world": "MAIN"`), where it makes a tagged field's `type` property return `"email"`. `getAttribute('type')`, `[type="email"]` queries and attribute observers still see the swap while the field has focus.
+
+The swap moves the caret to the start, so it's put back where Chrome would have put it. Tab selects everything. Otherwise it goes back where it was the last time the field had focus, or to the end if the page changed the value since. A click places it after this runs anyway.
 
 ### Google Docs
 
@@ -46,7 +58,7 @@ Serve the repo's root:
 python3 -m http.server 8765
 ```
 
-- `dev/test/index.html` is a torture page: weird padding, wrappers with no field padding, right/center alignment, password, horizontal scroll, `transform: scale`, wrapping textareas with tabs and emoji, a textarea inside a scroller, a closed shadow root, a modal dialog and a rich contenteditable. It runs `content.js` as a page script with `chrome.*` stubbed. Run `runChecks()` in the console. For every caret position in every field, it asks the extension where the caret is, then asks Chrome (`document.caretPositionFromPoint(...).getClientRect()`) which offset is at that point and where Chrome would draw it. Current result: 1,049 positions, 0 mismatches, worst error 0.34px.
+- `dev/test/index.html` is a torture page: weird padding, wrappers with no field padding, right/center alignment, password, horizontal scroll, `transform: scale`, wrapping textareas with tabs and emoji, a textarea inside a scroller, a closed shadow root, a modal dialog and a rich contenteditable. It runs `content.js` as a page script with `chrome.*` stubbed. Run `runChecks()` in the console. For every caret position in every field, it asks the extension where the caret is, then asks Chrome (`document.caretPositionFromPoint(...).getClientRect()`) which offset is at that point and where Chrome would draw it. Current result: 1,068 positions, 0 mismatches, worst error 0.34px. `runEmailChecks()` checks that a focused email field looks, validates and reports its type the same with the extension on as off, that `focus()` puts its caret back, and that it's a plain email field again after blur.
 - `dev/test/docs.html` mocks Google Docs' cursor markup. Type in it to watch the cursor glide, or run `await runDocsChecks()` to check the transition curve, which cursor gets styled, and the scrolling and off-switch behavior.
 - `dev/test/popup.html` previews the popup outside the extension.
 - `dev/test/inject.html` runs `smooth-caret.js` on a page with a strict Content-Security-Policy.
