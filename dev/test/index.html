@@ -57,6 +57,10 @@
   #ta-upper { width: 100%; height: 90px; text-transform: uppercase; word-spacing: 6px; font: 14px system-ui; }
   .scroller { height: 120px; overflow: auto; border: 1px solid #ccd; padding: 8px; }
   .scroller textarea { width: 100%; height: 260px; font: 14px/1.5 system-ui; }
+  /* Collapsing white-space values: a textarea still shows every space (Google's search box). */
+  #ta-preline { width: 100%; height: 96px; white-space: pre-line; font: 16px/22px Arial, sans-serif; padding: 6px 0 0; }
+  #ta-normal { width: 100%; height: 96px; white-space: normal; font: 15px Georgia, serif; padding: 4px 8px; }
+  #ta-nowrap { width: 100%; height: 70px; white-space: nowrap; font: 14px system-ui; padding: 4px 8px; }
 
   #ce { min-height: 160px; padding: 10px 14px; border: 1px solid #ccd; border-radius: 8px; outline: none; }
   #ce h2 { margin: 0 0 6px; font-size: 22px; }
@@ -116,6 +120,19 @@ line 10 end</textarea></div>
 
   <div class="case"><b>text-transform: uppercase, word-spacing</b>
 <textarea id="ta-upper">uppercase transform changes glyph widths so the mirror has to copy it too</textarea></div>
+
+  <div class="case"><b>Textarea, white-space: pre-line (spaces still show)</b>
+<textarea id="ta-preline"> gucci jeans,  doubled  gaps   and trailing
+   leading spaces on a line long enough to wrap past the edge of this box
+last</textarea></div>
+
+  <div class="case"><b>Textarea, white-space: normal (spaces and newlines still show)</b>
+<textarea id="ta-normal">  two leading,  two  between
+and a newline that   normal   would   collapse   on   an   ordinary   div</textarea></div>
+
+  <div class="case"><b>Textarea, white-space: nowrap (no wrapping, spaces show)</b>
+<textarea id="ta-nowrap">  a long line   with gaps that does not wrap so the textarea has to scroll sideways to show it all
+ second</textarea></div>
 
   <div class="case"><b>Textarea inside a scrolling div (clipped)</b>
     <div class="scroller"><textarea id="ta-clip">Scroll the outer box: the caret has to stay glued to this text and get clipped at the edge of the scroller instead of floating over the page.
@@ -231,7 +248,7 @@ And here.</textarea></div></div>
   }
 
   window.runChecks = () => {
-    const ids = ['plain', 'padded', 'nested', 'right', 'center', 'pw', 'long', 'scaled', 'ta', 'ta-scroll', 'ta-upper', 'ta-clip'];
+    const ids = ['plain', 'padded', 'nested', 'right', 'center', 'pw', 'long', 'scaled', 'ta', 'ta-scroll', 'ta-upper', 'ta-preline', 'ta-normal', 'ta-nowrap', 'ta-clip'];
     const out = ids.map((id) => {
       const el = document.getElementById(id);
       el.scrollIntoView({ block: 'center' });

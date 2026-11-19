@@ -585,6 +585,17 @@
         return out;
       }
 
+      // Chrome keeps every space and newline in a textarea whatever its
+      // white-space says (Google's search box switches to pre-line once it has
+      // text); only whether it wraps carries over. The mirror is a plain div, so
+      // it gets the preserving value with the same wrapping.
+      function textareaWhiteSpace(cs) {
+        const ws = cs.getPropertyValue('white-space');
+        const wrap = cs.getPropertyValue('text-wrap-mode') || (ws === 'nowrap' || ws === 'pre' ? 'nowrap' : 'wrap');
+        if (wrap === 'nowrap') return 'pre';
+        return ws === 'break-spaces' || cs.getPropertyValue('white-space-collapse') === 'break-spaces' ? 'break-spaces' : 'pre-wrap';
+      }
+
       // Lays the field's text out in the mirror and returns the caret at offset k
       // as {x, y, h} relative to the field's padding box, ignoring scroll. At a
       // soft wrap, `up` is the same caret drawn at the end of the upper line.
@@ -600,7 +611,7 @@
           const v = cs.getPropertyValue(p);
           if (v) css += `${p}:${v};`;
         }
-        css += isInput ? 'white-space:pre;' : `white-space:${cs.getPropertyValue('white-space') || 'pre-wrap'};`;
+        css += `white-space:${isInput ? 'pre' : textareaWhiteSpace(cs)};`;
         css += `width:${Math.max(0, box.cw - padL - padR)}px;`;
         if (css !== lastMirrorCss) {
           lastMirrorCss = css;
